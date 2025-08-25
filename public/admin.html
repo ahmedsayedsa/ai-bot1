@@ -1,100 +1,83 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>لوحة الإدارة</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link href="/css/main.css" rel="stylesheet"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة تحكم الأدمن</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    body { background-color: #f8f9fa; }
+    .container { max-width: 500px; margin-top: 50px; }
+    #qr-container { text-align: center; margin-top: 20px; }
+    #qr-container img { max-width: 100%; height: auto; }
+  </style>
 </head>
-<body class="bg-light">
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0">لوحة الإدارة</h3>
-    <div>
-      <button class="btn btn-outline-danger btn-sm" onclick="logout()">تسجيل الخروج</button>
+<body>
+
+<div class="container">
+  <h2 class="text-center mb-4">تسجيل دخول الأدمن</h2>
+  <form id="loginForm">
+    <div class="mb-3">
+      <label for="username" class="form-label">اسم المستخدم</label>
+      <input type="text" class="form-control" id="username" required>
     </div>
-  </div>
-
-  <div id="loginBox" class="card mb-4">
-    <div class="card-header">تسجيل الدخول</div>
-    <div class="card-body">
-      <form id="loginForm" onsubmit="return doLogin(event)">
-        <div class="row g-2">
-          <div class="col-md-4"><input class="form-control" name="user" placeholder="اسم المستخدم" required/></div>
-          <div class="col-md-4"><input type="password" class="form-control" name="pass" placeholder="كلمة المرور" required/></div>
-          <div class="col-md-4"><button class="btn btn-primary w-100">دخول</button></div>
-        </div>
-      </form>
+    <div class="mb-3">
+      <label for="password" class="form-label">كلمة المرور</label>
+      <input type="password" class="form-control" id="password" required>
     </div>
-  </div>
+    <button type="submit" class="btn btn-primary w-100">دخول</button>
+  </form>
 
-  <div id="adminUI" style="display:none">
-    <div class="row g-4">
-      <div class="col-lg-8">
-        <div class="card">
-          <div class="card-header d-flex justify-content-between">
-            <span>المستخدمون</span>
-            <button class="btn btn-outline-secondary btn-sm" onclick="loadUsers()">تحديث</button>
-          </div>
-          <div class="card-body">
-            <div class="table-responsive">
-              <table class="table table-sm align-middle" id="tbl">
-                <thead><tr><th>الاسم</th><th>الرقم</th><th>الحالة</th><th>الانتهاء</th><th>مرسلة</th><th>أوامر</th></tr></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <div class="card mt-3">
-          <div class="card-header">تعديل قالب رسالة</div>
-          <div class="card-body">
-            <form id="tmplForm" onsubmit="return updateTemplate(event)">
-              <div class="row g-2">
-                <div class="col-md-3"><input class="form-control" name="phone" placeholder="رقم" required/></div>
-                <div class="col-md-7"><input class="form-control" name="template" placeholder="يدعم {name} و {order}" /></div>
-                <div class="col-md-2"><button class="btn btn-primary w-100">حفظ</button></div>
-              </div>
-            </form>
-          </div>
-        </div>
-
-      </div>
-      <div class="col-lg-4">
-        <div class="card mb-3">
-          <div class="card-header">إحصائيات البوت</div>
-          <div class="card-body">
-            <div><b>الحالة:</b> <span id="status">—</span></div>
-            <div><b>زمن التشغيل:</b> <span id="uptime">—</span> ثانية</div>
-            <div><b>إجمالي الرسائل:</b> <span id="total">—</span></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header">إضافة/تعديل مستخدم</div>
-          <div class="card-body">
-            <form id="userForm" onsubmit="return saveUser(event)">
-              <div class="mb-2"><input class="form-control" name="name" placeholder="الاسم"/></div>
-              <div class="mb-2"><input class="form-control" name="phone" placeholder="رقم (بدون +)" required/></div>
-              <div class="mb-2"><input class="form-control" name="durationDays" type="number" placeholder="مدة الاشتراك بالأيام"/></div>
-              <div class="mb-2">
-                <select class="form-select" name="status">
-                  <option value="active">active</option>
-                  <option value="inactive">inactive</option>
-                </select>
-              </div>
-              <div class="mb-2"><input class="form-control" name="endDate" placeholder="أو تاريخ ISO بدلاً من المدة"/></div>
-              <div class="mb-2"><input class="form-control" name="messageTemplate" placeholder="قالب افتراضي للمستخدم"/></div>
-              <button class="btn btn-primary w-100">حفظ</button>
-            </form>
-          </div>
-        </div>
-
-      </div>
-    </div>
+  <div id="qr-container" class="mt-4" style="display:none;">
+    <h5>رمز الـ QR</h5>
+    <img id="qr-image" alt="QR Code">
   </div>
 </div>
-<script src="/js/admin.js"></script>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function (e) {
+  e.preventDefault(); // منع إعادة تحميل الصفحة
+
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user: username, pass: password }),
+      credentials: 'include'
+    });
+
+    const data = await res.json();
+    console.log('Login Response:', data);
+
+    if (res.ok) {
+      alert('تم تسجيل الدخول بنجاح');
+      loadQRCode();
+    } else {
+      alert(data.message || 'خطأ في تسجيل الدخول');
+    }
+  } catch (err) {
+    console.error('Error during login:', err);
+    alert('حصل خطأ في الاتصال بالسيرفر');
+  }
+});
+
+async function loadQRCode() {
+  try {
+    const res = await fetch('/api/admin/qr', { credentials: 'include' });
+    if (!res.ok) throw new Error('فشل تحميل QR Code');
+    const blob = await res.blob();
+    const imgUrl = URL.createObjectURL(blob);
+    document.getElementById('qr-image').src = imgUrl;
+    document.getElementById('qr-container').style.display = 'block';
+  } catch (err) {
+    console.error('Error loading QR Code:', err);
+    alert('تعذر تحميل رمز الـ QR');
+  }
+}
+</script>
+
 </body>
 </html>
