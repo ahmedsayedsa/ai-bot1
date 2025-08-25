@@ -25,7 +25,7 @@
       <label for="password" class="form-label">كلمة المرور</label>
       <input type="password" class="form-control" id="password" required>
     </div>
-    <button type="submit" class="btn btn-primary w-100">دخول</button>
+    <button type="submit" class="btn btn-primary w-100" id="loginBtn">دخول</button>
   </form>
 
   <div id="qr-container" class="mt-4" style="display:none;">
@@ -35,48 +35,62 @@
 </div>
 
 <script>
-document.getElementById('loginForm').addEventListener('submit', async function (e) {
-  e.preventDefault(); // منع إعادة تحميل الصفحة
+(function() {
+  const loginForm = document.getElementById('loginForm');
+  const qrContainer = document.getElementById('qr-container');
+  const qrImage = document.getElementById('qr-image');
 
-  const username = document.getElementById('username').value.trim();
-  const password = document.getElementById('password').value.trim();
+  // تسجيل الدخول
+  loginForm.addEventListener('submit', async function (e) {
+    e.preventDefault(); // منع إعادة تحميل الصفحة
 
-  try {
-    const res = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user: username, pass: password }),
-      credentials: 'include'
-    });
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
 
-    const data = await res.json();
-    console.log('Login Response:', data);
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: username, pass: password }),
+        credentials: 'include'
+      });
 
-    if (res.ok) {
-      alert('تم تسجيل الدخول بنجاح');
-      loadQRCode();
-    } else {
-      alert(data.message || 'خطأ في تسجيل الدخول');
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
+
+      console.log('Login Response:', data);
+
+      if (res.ok) {
+        alert('تم تسجيل الدخول بنجاح');
+        loadQRCode();
+      } else {
+        alert(data.message || 'خطأ في تسجيل الدخول');
+      }
+    } catch (err) {
+      console.error('Error during login:', err);
+      alert('حصل خطأ في الاتصال بالسيرفر');
     }
-  } catch (err) {
-    console.error('Error during login:', err);
-    alert('حصل خطأ في الاتصال بالسيرفر');
-  }
-});
+  });
 
-async function loadQRCode() {
-  try {
-    const res = await fetch('/api/admin/qr', { credentials: 'include' });
-    if (!res.ok) throw new Error('فشل تحميل QR Code');
-    const blob = await res.blob();
-    const imgUrl = URL.createObjectURL(blob);
-    document.getElementById('qr-image').src = imgUrl;
-    document.getElementById('qr-container').style.display = 'block';
-  } catch (err) {
-    console.error('Error loading QR Code:', err);
-    alert('تعذر تحميل رمز الـ QR');
+  // تحميل الـ QR Code
+  async function loadQRCode() {
+    try {
+      const res = await fetch('/api/admin/qr', { credentials: 'include' });
+      if (!res.ok) throw new Error('فشل تحميل QR Code');
+      const blob = await res.blob();
+      const imgUrl = URL.createObjectURL(blob);
+      qrImage.src = imgUrl;
+      qrContainer.style.display = 'block';
+    } catch (err) {
+      console.error('Error loading QR Code:', err);
+      alert('تعذر تحميل رمز الـ QR');
+    }
   }
-}
+})();
 </script>
 
 </body>
