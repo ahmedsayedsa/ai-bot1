@@ -434,8 +434,14 @@ app.get('/', (req, res) => {
               const qrUrl = URL.createObjectURL(qrBlob);
               
               document.getElementById('qrCode').innerHTML = `
+               res.send(`
+                 <html>
+                <body>
                 <p>امسح QR Code للاتصال:</p>
-                <img src="${qrUrl}" width="200" height="200">
+                </body>
+                </html>
+                    <img src="${qrUrl}" width="200" height="200">`);
+
               `;
             } else {
               document.getElementById('qrCode').innerHTML = '';
