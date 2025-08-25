@@ -3,86 +3,421 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة المستخدم - بوت الواتساب</title>
-    <link href="/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/css/style.css" rel="stylesheet">
+    <title>User Panel - WhatsApp Bot</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-shadow { box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .toast { position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 8px; color: white; z-index: 1001; transform: translateX(400px); transition: transform 0.3s ease; }
+        .toast.show { transform: translateX(0); }
+        .toast.success { background-color: #10B981; }
+        .toast.error { background-color: #EF4444; }
+        .status-active { background: linear-gradient(135deg, #10B981, #059669); }
+        .status-expired { background: linear-gradient(135deg, #EF4444, #DC2626); }
+        .status-warning { background: linear-gradient(135deg, #F59E0B, #D97706); }
+        .qr-code { padding: 15px; background: white; border-radius: 10px; display: inline-block; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .copy-btn { cursor: pointer; transition: all 0.2s; }
+        .copy-btn:hover { transform: scale(1.1); }
+    </style>
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="#">لوحة مستخدم بوت الواتساب</a>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Login Section -->
+    <div id="loginSection" class="gradient-bg min-h-screen flex items-center justify-center px-4">
+        <div class="bg-white rounded-xl card-shadow p-8 w-full max-w-md">
+            <div class="text-center mb-6">
+                <i class="fas fa-user-circle text-6xl text-blue-500 mb-4"></i>
+                <h1 class="text-2xl font-bold text-gray-800 mb-2">صفحة المستخدم</h1>
+                <p class="text-gray-600">يرجى إدخال رقم هاتفك للدخول</p>
+            </div>
+            
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">رقم الهاتف</label>
+                    <input type="text" id="phoneNumber" placeholder="966501234567" 
+                           class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:border-blue-500 text-lg" required>
+                    <p class="text-xs text-gray-500 mt-1">أدخل رقمك بدون أي رموز أو مسافات</p>
+                </div>
+                
+                <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200">
+                    <i class="fas fa-sign-in-alt ml-2"></i>دخول
+                </button>
+            </form>
+            
+            <div class="text-center mt-4">
+                <a href="/" class="text-blue-500 hover:underline text-sm">
+                    <i class="fas fa-arrow-left ml-1"></i>العودة للرئيسية
+                </a>
+            </div>
         </div>
-    </nav>
+    </div>
 
-    <div class="container mt-4">
-        <!-- قسم تسجيل الدخول -->
-        <div id="userLoginSection">
-            <div class="row justify-content-center">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">تسجيل الدخول</div>
-                        <div class="card-body">
-                            <form id="userLoginForm">
-                                <div class="mb-3">
-                                    <label for="userPhoneLogin" class="form-label">رقم الهاتف</label>
-                                    <input type="text" class="form-control" id="userPhoneLogin" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary">تسجيل الدخول</button>
-                            </form>
+    <!-- User Dashboard -->
+    <div id="userDashboard" style="display: none;">
+        <!-- Header -->
+        <nav class="bg-white shadow-lg">
+            <div class="container mx-auto px-4 py-3">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-4 rtl:space-x-reverse">
+                        <i class="fas fa-user text-blue-500 text-3xl"></i>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-800">مرحباً <span id="userName"></span></h1>
+                            <p class="text-sm text-gray-600">رقم الهاتف: <span id="userPhone"></span></p>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2 rtl:space-x-reverse">
+                        <a href="/" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition duration-200">
+                            <i class="fas fa-home ml-2"></i>الرئيسية
+                        </a>
+                        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-200">
+                            <i class="fas fa-sign-out-alt ml-2"></i>خروج
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mx-auto px-4 py-8">
+            <!-- Subscription Status -->
+            <div id="subscriptionCard" class="rounded-xl text-white p-6 mb-8 card-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold mb-2">حالة الاشتراك</h2>
+                        <div id="subscriptionStatus" class="text-lg mb-1"></div>
+                        <div id="subscriptionDetails" class="text-sm opacity-90"></div>
+                    </div>
+                    <div class="text-5xl opacity-80">
+                        <i id="subscriptionIcon" class="fas fa-crown"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white rounded-xl card-shadow p-6">
+                    <div class="flex items-center">
+                        <div class="bg-blue-500 p-3 rounded-full">
+                            <i class="fas fa-envelope text-white text-xl"></i>
+                        </div>
+                        <div class="mr-4">
+                            <div id="messageCount" class="text-2xl font-bold text-gray-800">0</div>
+                            <div class="text-sm text-gray-600">الرسائل المُرسلة</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl card-shadow p-6">
+                    <div class="flex items-center">
+                        <div class="bg-green-500 p-3 rounded-full">
+                            <i class="fas fa-calendar text-white text-xl"></i>
+                        </div>
+                        <div class="mr-4">
+                            <div id="memberSince" class="text-2xl font-bold text-gray-800">--</div>
+                            <div class="text-sm text-gray-600">عضو منذ</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl card-shadow p-6">
+                    <div class="flex items-center">
+                        <div class="bg-purple-500 p-3 rounded-full">
+                            <i class="fas fa-shopping-cart text-white text-xl"></i>
+                        </div>
+                        <div class="mr-4">
+                            <div id="orderCount" class="text-2xl font-bold text-gray-800">0</div>
+                            <div class="text-sm text-gray-600">إجمالي الطلبات</div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- قسم معلومات المستخدم -->
-        <div id="userInfoSection" class="d-none">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">معلومات الاشتراك</div>
-                        <div class="card-body">
-                            <h5 id="userName"></h5>
-                            <p><strong>رقم الهاتف:</strong> <span id="userPhone"></span></p>
-                            <p><strong>حالة الاشتراك:</strong> <span id="subscriptionStatus" class="badge">جاري التحقق...</span></p>
-                            <p><strong>تاريخ انتهاء الاشتراك:</strong> <span id="subscriptionExpiry"></span></p>
-                            <p><strong>عدد الرسائل المستلمة:</strong> <span id="userMessageCount">0</span></p>
+            <!-- API Information -->
+            <div class="bg-white rounded-xl card-shadow p-6 mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-code text-blue-500 ml-2"></i>معلومات API
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">API Key الخاص بك</label>
+                        <div class="flex items-center">
+                            <input type="text" id="apiKey" readonly 
+                                   class="flex-1 px-3 py-2 border rounded-l-lg bg-gray-50 text-sm font-mono">
+                            <button onclick="copyToClipboard('apiKey')" 
+                                    class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-r-lg copy-btn">
+                                <i class="fas fa-copy"></i>
+                            </button>
                         </div>
                     </div>
 
-                    <div class="card mb-4">
-                        <div class="card-header">قالب الرسالة</div>
-                        <div class="card-body">
-                            <p id="userMessageTemplate"></p>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Webhook URL</label>
+                        <div class="flex items-center">
+                            <input type="text" id="webhookUrl" readonly 
+                                   class="flex-1 px-3 py-2 border rounded-l-lg bg-gray-50 text-sm font-mono">
+                            <button onclick="copyToClipboard('webhookUrl')" 
+                                    class="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-r-lg copy-btn">
+                                <i class="fas fa-copy"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">QR Code للاتصال</div>
-                        <div class="card-body text-center">
-                            <div id="userQrCode"></div>
-                            <p class="mt-2">امسح QR Code للاتصال بالبوت</p>
-                        </div>
+                <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <h4 class="font-bold text-blue-800 mb-2">
+                        <i class="fas fa-info-circle ml-1"></i>كيفية الاستخدام
+                    </h4>
+                    <p class="text-sm text-blue-700 mb-2">
+                        يمكنك إرسال الطلبات من تطبيق Easy Order إلى الرابط أعلاه باستخدام POST request
+                    </p>
+                    <div class="bg-white p-3 rounded border-r-4 border-blue-500 mt-3">
+                        <p class="text-xs font-mono text-gray-700">
+                            POST /webhook/easyorder/YOUR_API_KEY<br>
+                            Content-Type: application/json
+                        </p>
                     </div>
+                </div>
+            </div>
 
-                    <div class="card">
-                        <div class="card-header">رابط Webhook</div>
-                        <div class="card-body">
-                            <p>استخدم هذا الرابط لتوصيل Easy Order مع نظامك:</p>
-                            <div class="input-group mb-3">
-                                <input type="text" class="form-control" id="webhookUrl" readonly>
-                                <button class="btn btn-outline-secondary" type="button" onclick="copyWebhookUrl()">نسخ</button>
-                            </div>
-                            <small class="text-muted">سيتم إرسال إشعارات الطلبات تلقائياً إلى رقم هاتفك</small>
-                        </div>
-                    </div>
+            <!-- QR Code for Personal WhatsApp -->
+            <div class="bg-white rounded-xl card-shadow p-6 text-center">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-qrcode text-green-500 ml-2"></i>QR Code الخاص بك
+                </h3>
+                
+                <div id="userQrCode" class="mb-4">
+                    <!-- QR Code will be generated here -->
+                </div>
+                
+                <p class="text-gray-600 text-sm mb-4">
+                    يمكن للعملاء مسح هذا الكود للتواصل معك مباشرة عبر واتساب
+                </p>
+                
+                <div class="flex justify-center space-x-4 rtl:space-x-reverse">
+                    <button onclick="downloadQR()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-200">
+                        <i class="fas fa-download ml-1"></i>تحميل
+                    </button>
+                    <button onclick="shareQR()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition duration-200">
+                        <i class="fas fa-share ml-1"></i>مشاركة
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+    <script>
+        let currentUser = null;
+
+        // تسجيل دخول المستخدم
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            
+            if (!phoneNumber) {
+                showToast('يرجى إدخال رقم الهاتف', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phoneNumber })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentUser = result.user;
+                    localStorage.setItem('userPhone', phoneNumber);
+                    showUserDashboard();
+                    showToast('تم تسجيل الدخول بنجاح!', 'success');
+                } else {
+                    showToast('المستخدم غير موجود أو البيانات غير صحيحة', 'error');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showToast('حدث خطأ في تسجيل الدخول', 'error');
+            }
+        });
+
+        // عرض لوحة المستخدم
+        function showUserDashboard() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('userDashboard').style.display = 'block';
+            
+            updateUserInfo();
+            generateUserQR();
+        }
+
+        // تحديث معلومات المستخدم
+        function updateUserInfo() {
+            if (!currentUser) return;
+
+            // معلومات المستخدم الأساسية
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('userPhone').textContent = currentUser.phoneNumber;
+            document.getElementById('messageCount').textContent = currentUser.messageCount || 0;
+            document.getElementById('orderCount').textContent = currentUser.totalOrders || 0;
+
+            // حساب المدة كعضو
+            if (currentUser.createdAt) {
+                const createdDate = new Date(currentUser.createdAt);
+                const now = new Date();
+                const diffTime = Math.abs(now - createdDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                document.getElementById('memberSince').textContent = `${diffDays} يوم`;
+            }
+
+            // حالة الاشتراك
+            const subscriptionCard = document.getElementById('subscriptionCard');
+            const subscriptionStatus = document.getElementById('subscriptionStatus');
+            const subscriptionDetails = document.getElementById('subscriptionDetails');
+            const subscriptionIcon = document.getElementById('subscriptionIcon');
+
+            if (currentUser.isExpired) {
+                subscriptionCard.className = 'rounded-xl text-white p-6 mb-8 card-shadow status-expired';
+                subscriptionStatus.textContent = 'الاشتراك منتهي';
+                subscriptionDetails.textContent = 'يرجى تجديد اشتراكك للاستمرار في استخدام الخدمة';
+                subscriptionIcon.className = 'fas fa-exclamation-triangle';
+            } else if (currentUser.daysLeft <= 7) {
+                subscriptionCard.className = 'rounded-xl text-white p-6 mb-8 card-shadow status-warning';
+                subscriptionStatus.textContent = 'الاشتراك قارب على الانتهاء';
+                subscriptionDetails.textContent = `${currentUser.daysLeft} أيام متبقية - يرجى تجديد اشتراكك قريباً`;
+                subscriptionIcon.className = 'fas fa-hourglass-half';
+            } else {
+                subscriptionCard.className = 'rounded-xl text-white p-6 mb-8 card-shadow status-active';
+                subscriptionStatus.textContent = 'اشتراك نشط';
+                subscriptionDetails.textContent = `${currentUser.daysLeft} يوم متبقي`;
+                subscriptionIcon.className = 'fas fa-crown';
+            }
+
+            // معلومات API
+            document.getElementById('apiKey').value = currentUser.apiKey || 'غير متوفر';
+            document.getElementById('webhookUrl').value = 
+                `${window.location.origin}/webhook/easyorder/${currentUser.apiKey || 'YOUR_API_KEY'}`;
+        }
+
+        // إنشاء QR Code
+        async function generateUserQR() {
+            if (!currentUser) return;
+
+            const qrContainer = document.getElementById('userQrCode');
+            const whatsappUrl = `https://wa.me/${currentUser.phoneNumber}`;
+
+            try {
+                qrContainer.innerHTML = '<div class="qr-code"></div>';
+                await QRCode.toCanvas(qrContainer.querySelector('.qr-code'), whatsappUrl, {
+                    width: 200,
+                    height: 200,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    }
+                });
+            } catch (error) {
+                console.error('Error generating QR code:', error);
+                qrContainer.innerHTML = '<p class="text-red-500">حدث خطأ في إنشاء QR Code</p>';
+            }
+        }
+
+        // نسخ النص للحافظة
+        async function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            try {
+                await navigator.clipboard.writeText(element.value);
+                showToast('تم النسخ بنجاح!', 'success');
+            } catch (error) {
+                // Fallback for older browsers
+                element.select();
+                document.execCommand('copy');
+                showToast('تم النسخ!', 'success');
+            }
+        }
+
+        // تحميل QR Code
+        function downloadQR() {
+            const canvas = document.querySelector('#userQrCode canvas');
+            if (canvas) {
+                const link = document.createElement('a');
+                link.download = `whatsapp-qr-${currentUser.phoneNumber}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                showToast('تم تحميل QR Code!', 'success');
+            }
+        }
+
+        // مشاركة QR Code
+        async function shareQR() {
+            const canvas = document.querySelector('#userQrCode canvas');
+            if (canvas && navigator.share) {
+                try {
+                    canvas.toBlob(async (blob) => {
+                        const file = new File([blob], 'whatsapp-qr.png', { type: 'image/png' });
+                        await navigator.share({
+                            title: 'WhatsApp QR Code',
+                            text: 'امسح الكود للتواصل معي عبر واتساب',
+                            files: [file]
+                        });
+                    });
+                } catch (error) {
+                    // Fallback: copy WhatsApp link
+                    const whatsappUrl = `https://wa.me/${currentUser.phoneNumber}`;
+                    await navigator.clipboard.writeText(whatsappUrl);
+                    showToast('تم نسخ رابط واتساب!', 'success');
+                }
+            } else {
+                // Fallback: copy WhatsApp link
+                const whatsappUrl = `https://wa.me/${currentUser.phoneNumber}`;
+                await navigator.clipboard.writeText(whatsappUrl);
+                showToast('تم نسخ رابط واتساب!', 'success');
+            }
+        }
+
+        // تسجيل الخروج
+        function logout() {
+            localStorage.removeItem('userPhone');
+            currentUser = null;
+            document.getElementById('userDashboard').style.display = 'none';
+            document.getElementById('loginSection').style.display = 'flex';
+            document.getElementById('phoneNumber').value = '';
+        }
+
+        // التحقق من جلسة سابقة
+        function checkExistingSession() {
+            const savedPhone = localStorage.getItem('userPhone');
+            if (savedPhone) {
+                document.getElementById('phoneNumber').value = savedPhone;
+                // محاولة تسجيل دخول تلقائي
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            }
+        }
+
+        // عرض رسالة التنبيه
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        // بدء التطبيق
+        document.addEventListener('DOMContentLoaded', function() {
+            checkExistingSession();
+        });
+    </script>
+</body>
+</html>
     <script src="/js/bootstrap.bundle.min.js"></script>
     <script src="/js/user.js"></script>
 </body>
