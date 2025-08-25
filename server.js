@@ -112,13 +112,9 @@ class Server {
         this.app.use('/api/admin', adminRoutes);
         this.app.use('/api/payments', paymentsRoutes);
 
-        // CSP override for specific routes
-        this.app.use('/admin.html', cspOverride);
-        this.app.use('/user.html', cspOverride);
-
-        // Serve HTML files
-        this.app.get('/', (req, res) => {
-            res.sendFile(path.join(__dirname, '../public/index.html'));
+        // Serve HTML files with CSP override where needed
+        this.app.get('/admin', cspOverride, (req, res) => {
+            res.sendFile(path.join(__dirname, '../public/admin.html'));
         });
 
         this.app.get('/login', (req, res) => {
@@ -129,12 +125,12 @@ class Server {
             res.sendFile(path.join(__dirname, '../public/register.html'));
         });
 
-        this.app.get('/user', (req, res) => {
+        this.app.get('/user', cspOverride, (req, res) => {
             res.sendFile(path.join(__dirname, '../public/user.html'));
         });
 
-        this.app.get('/admin', (req, res) => {
-            res.sendFile(path.join(__dirname, '../public/admin.html'));
+        this.app.get('/', (req, res) => {
+            res.sendFile(path.join(__dirname, '../public/index.html'));
         });
 
         // 404 handler
