@@ -2,8 +2,6 @@
  * Main Server File
  * WhatsApp Subscription Bot
  */
-this.app.use(express.json());
-this.app.use(express.urlencoded({ extended: true }));
 
 const express = require('express');
 const path = require('path');
@@ -11,17 +9,17 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 
-// Import configurations and utilities
+// Config & utils
 const env = require('./config/env');
 const logger = require('./utils/logger');
 const { initializeFirebase } = require('./config/firebase');
 
-// Import middlewares
+// Middlewares
 const rateLimitMiddleware = require('./middlewares/rateLimit');
 const errorHandler = require('./middlewares/errorHandler');
 const cspOverride = require('./middlewares/cspOverride');
 
-// Import routes
+// Routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const adminRoutes = require('./routes/admin');
@@ -30,14 +28,18 @@ const paymentsRoutes = require('./routes/payments');
 class Server {
     constructor() {
         this.app = express();
-        this.port = env.PORT;
+        this.port = env.PORT || 8080;
         this.setupMiddlewares();
         this.setupRoutes();
         this.setupErrorHandling();
     }
 
     setupMiddlewares() {
-        // Security middlewares
+        // Body parsing
+        this.app.use(express.json({ limit: '10mb' }));
+        this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+        // Security headers
         this.app.use(helmet({
             contentSecurityPolicy: {
                 directives: {
@@ -55,10 +57,10 @@ class Server {
             crossOriginEmbedderPolicy: false
         }));
 
-        // CORS configuration
+        // CORS
         this.app.use(cors({
-            origin: env.NODE_ENV === 'production' 
-                ? [env.FRONTEND_URL] 
+            origin: env.NODE_ENV === 'production'
+                ? [env.FRONTEND_URL]
                 : ['http://localhost:3000', 'http://localhost:8080'],
             credentials: true,
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -67,17 +69,14 @@ class Server {
 
         // Compression
         this.app.use(compression());
-        // منع الكاش للملفات الثابتة
-        app.use((req, res, next) => {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-        next();
-        });
 
-        // Body parsing
-        this.app.use(express.json({ limit: '10mb' }));
-        this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+        // منع الكاش أثناء التطوير
+        this.app.use((req, res, next) => {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+            next();
+        });
 
         // Rate limiting
         this.app.use(rateLimitMiddleware);
@@ -101,7 +100,7 @@ class Server {
     }
 
     setupRoutes() {
-        // Health check endpoint
+        // Health check
         this.app.get('/health', (req, res) => {
             res.status(200).json({
                 status: 'healthy',
@@ -118,44 +117,32 @@ class Server {
         this.app.use('/api/admin', adminRoutes);
         this.app.use('/api/payments', paymentsRoutes);
 
-        // CSP override for specific routes
+        // Simple login test route
+        this.app.post('/api/login', (req, res) => {
+            const { email, password } = req.body;
+            if (email === 'test@example.com' && password === '123456') {
+                res.json({
+                    success: true,
+                    message: 'Login successful',
+                    token: 'JWT_TOKEN_HERE'
+                });
+            } else {
+                res.status(401).json({
+                    success: false,
+                    message: 'Invalid email or password'
+                });
+            }
+        });
+
+        // CSP override for HTML pages
         this.app.use('/admin.html', cspOverride);
         this.app.use('/user.html', cspOverride);
 
-        // Serve HTML files
-        this.app.get('/', (req, res) => {
-            res.sendFile(path.join(__dirname, '../public/index.html'));
-        });
-
-        this.app.post('/api/login', (req, res) => {
-         const { email, password } = req.body;
-
-         // مثال بسيط للتحقق (استبدله بالتحقق الفعلي من قاعدة البيانات)
-         if (email === 'test@example.com' && password === '123456') {
-        res.json({
-            success: true,
-            message: 'Login successful',
-            token: 'JWT_TOKEN_HERE'
-        });
-        } else {
-        res.status(401).json({
-            success: false,
-            message: 'Invalid email or password'
-        });
-         }
-        });
-
-        this.app.get('/register', (req, res) => {
-            res.sendFile(path.join(__dirname, '../public/register.html'));
-        });
-
-        this.app.get('/user', (req, res) => {
-            res.sendFile(path.join(__dirname, '../public/user.html'));
-        });
-
-        this.app.get('/admin', (req, res) => {
-            res.sendFile(path.join(__dirname, '../public/admin.html'));
-        });
+        // HTML pages
+        this.app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
+        this.app.get('/register', (req, res) => res.sendFile(path.join(__dirname, '../public/register.html')));
+        this.app.get('/user', (req, res) => res.sendFile(path.join(__dirname, '../public/user.html')));
+        this.app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/admin.html')));
 
         // 404 handler
         this.app.use('*', (req, res) => {
@@ -171,46 +158,34 @@ class Server {
     }
 
     setupErrorHandling() {
-        // Global error handler
         this.app.use(errorHandler);
 
-        // Uncaught exception handler
         process.on('uncaughtException', (error) => {
             logger.error('Uncaught Exception:', error);
             process.exit(1);
         });
 
-        // Unhandled rejection handler
         process.on('unhandledRejection', (reason, promise) => {
             logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
             process.exit(1);
         });
 
-        // Graceful shutdown
         process.on('SIGTERM', () => {
             logger.info('SIGTERM received, shutting down gracefully');
-            this.server.close(() => {
-                logger.info('Process terminated');
-                process.exit(0);
-            });
+            this.server.close(() => process.exit(0));
         });
 
         process.on('SIGINT', () => {
             logger.info('SIGINT received, shutting down gracefully');
-            this.server.close(() => {
-                logger.info('Process terminated');
-                process.exit(0);
-            });
+            this.server.close(() => process.exit(0));
         });
     }
 
     async start() {
         try {
-            // Initialize Firebase
             await initializeFirebase();
             logger.info('Firebase initialized successfully');
 
-            // Start server
             this.server = this.app.listen(this.port, '0.0.0.0', () => {
                 logger.info(`Server running on port ${this.port}`, {
                     environment: env.NODE_ENV,
@@ -227,7 +202,6 @@ class Server {
     }
 }
 
-// Start server if this file is run directly
 if (require.main === module) {
     const server = new Server();
     server.start().catch((error) => {
