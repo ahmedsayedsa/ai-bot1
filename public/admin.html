@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة إدارة بوت الواتساب</title>
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">إدارة بوت الواتساب</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('users')">المستخدمين</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('stats')">الإحصائيات</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('botStatus')">حالة البوت</a></li>
+                </ul>
+                <button class="btn btn-outline-light" onclick="logout()">تسجيل الخروج</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- قسم تسجيل الدخول -->
+        <div id="loginSection">
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">تسجيل الدخول للإدارة</div>
+                        <div class="card-body">
+                            <form id="loginForm">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">اسم المستخدم</label>
+                                    <input type="text" class="form-control" id="username" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">كلمة المرور</label>
+                                    <input type="password" class="form-control" id="password" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">تسجيل الدخول</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- قسم إدارة المستخدمين -->
+        <div id="usersSection" class="d-none">
+            <h2>إدارة المستخدمين</h2>
+            <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addUserModal">إضافة مستخدم</button>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>رقم الهاتف</th>
+                            <th>حالة الاشتراك</th>
+                            <th>تاريخ الانتهاء</th>
+                            <th>عدد الرسائل</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- قسم الإحصائيات -->
+        <div id="statsSection" class="d-none">
+            <h2>الإحصائيات</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">إجمالي المستخدمين</h5>
+                            <p class="card-text display-4" id="totalUsers">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">إجمالي الرسائل</h5>
+                            <p class="card-text display-4" id="totalMessages">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">المستخدمين النشطين</h5>
+                            <p class="card-text display-4" id="activeUsers">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- قسم حالة البوت -->
+        <div id="botStatusSection" class="d-none">
+            <h2>حالة البوت</h2>
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">معلومات الاتصال</h5>
+                    <p id="connectionStatus">جاري التحقق من حالة الاتصال...</p>
+                    <div id="adminQrCode" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نماذج (Modals) -->
+    <div class="modal fade" id="addUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">إضافة/تعديل مستخدم</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="userForm">
+                        <input type="hidden" id="editUserId">
+                        <div class="mb-3">
+                            <label for="userName" class="form-label">الاسم</label>
+                            <input type="text" class="form-control" id="userName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="userPhone" class="form-label">رقم الهاتف</label>
+                            <input type="text" class="form-control" id="userPhone" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="subscriptionDays" class="form-label">مدة الاشتراك (أيام)</label>
+                            <input type="number" class="form-control" id="subscriptionDays" value="30" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" onclick="saveUser()">حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="templateModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تعديل قالب الرسالة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="templateForm">
+                        <input type="hidden" id="templatePhone">
+                        <div class="mb-3">
+                            <label for="messageTemplate" class="form-label">قالب الرسالة</label>
+                            <textarea class="form-control" id="messageTemplate" rows="4" required></textarea>
+                            <small class="form-text text-muted">استخدم {name} لاسم المستخدم و {order} لمعلومات الطلب</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" onclick="saveTemplate()">حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>
