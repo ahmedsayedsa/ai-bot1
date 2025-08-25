@@ -1,42 +1,57 @@
-# استخدم إصدار Node.js الرسمي كصورة أساسية
-FROM node:20-alpine
+# Multi-stage Dockerfile for WhatsApp Subscription Bot
+# Optimized for Google Cloud Run
 
-# أنشئ مجلد التطبيق
+# Build stage
+FROM node:18-alpine AS builder
+
+# Set working directory
 WORKDIR /app
 
-# انسخ ملفات package.json و package-lock.json
+# Copy package files
 COPY package*.json ./
 
-# ثبّت الاعتماديات الخاصة بالإنتاج فقط
-# استخدام npm ci يضمن تثبيت نفس الإصدارات الموجودة في package-lock.json
+# Install dependencies (including dev dependencies for build)
 RUN npm ci --only=production && npm cache clean --force
 
-# انسخ باقي ملفات التطبيق
-# استخدام .dockerignore يضمن عدم نسخ الملفات غير الضرورية مثل node_modules
-COPY . .
+# Production stage
+FROM node:18-alpine AS production
 
-# --------------------------------------------------------------------
-# تم تحويل الأسطر التالية إلى تعليقات لأنها تسبب مشاكل في Cloud Run
-# RUN addgroup -g 1001 -S nodejs && \
-#     adduser -S nextjs -u 1001 && \
-#     chown -R nextjs:nodejs /app
-# USER nextjs
-# --------------------------------------------------------------------
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
 
-# Cloud Run يوفر متغير البيئة PORT تلقائيًا
-# EXPOSE 8080 هو مجرد توثيق، لكن من الجيد إبقاؤه
+# Create app directory and user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+WORKDIR /app
+
+# Copy package files and install production dependencies
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy application code
+COPY --chown=nextjs:nodejs . .
+
+# Create necessary directories with correct permissions
+RUN mkdir -p logs && \
+    chown -R nextjs:nodejs /app
+
+# Switch to non-root user
+USER nextjs
+
+# Expose port (Cloud Run will override this)
 EXPOSE 8080
 
-# --------------------------------------------------------------------
-# تم تعطيل HEALTHCHECK الخاص بـ Docker للاعتماد على آلية Cloud Run
-# HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-#     CMD node healthcheck.js
-# --------------------------------------------------------------------
+# Set environment variables for Cloud Run
+ENV NODE_ENV=production
+ENV PORT=8080
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:8080/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
-# الأمر الذي سيتم تشغيله لبدء التطبيق
-# هذا الأمر صحيح ويجب أن يعمل الآن
-# ... (كل الأسطر الأخرى كما هي) ...
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
 
-# بدلاً من استخدام npm start، قم بتشغيل node مباشرة
-CMD ["node", "src/server.js"]
+# Start the application
+CMD ["npm", "start"]

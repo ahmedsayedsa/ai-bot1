@@ -1,0 +1,114 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: wa-sub-bot
+  labels:
+    cloud.googleapis.com/location: me-central1
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/execution-environment: gen2
+spec:
+  template:
+    metadata:
+      annotations:
+        # Resource limits
+        run.googleapis.com/memory: 1Gi
+        run.googleapis.com/cpu: '1'
+        
+        # Scaling configuration
+        autoscaling.knative.dev/minScale: '1'
+        autoscaling.knative.dev/maxScale: '100'
+        
+        # Startup and health checks
+        run.googleapis.com/cpu-throttling: 'true'
+        run.googleapis.com/startup-cpu-boost: 'true'
+        
+        # Container startup timeout
+        run.googleapis.com/timeout: '300'
+        
+        # Health check configuration
+        run.googleapis.com/health-check-timeout: '10'
+        
+        # VPC settings (if needed)
+        # run.googleapis.com/vpc-access-connector: projects/PROJECT_ID/locations/REGION/connectors/CONNECTOR_NAME
+        
+    spec:
+      serviceAccountName: firebase-adminsdk@chrome-backbone-458221-m9.iam.gserviceaccount.com
+      containerConcurrency: 1000
+      timeoutSeconds: 300
+      
+      containers:
+      - name: wa-sub-bot
+        image: gcr.io/chrome-backbone-458221-m9/wa-sub-bot
+        
+        ports:
+        - name: http1
+          containerPort: 8080
+        
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "8080"
+        - name: HOST
+          value: "0.0.0.0"
+        - name: ADMIN_USER
+          value: "admin"
+        - name: ADMIN_PASS
+          value: "Qwe@123456"
+        - name: SESSION_SECRET
+          value: "987654321"
+        - name: FIREBASE_PROJECT_ID
+          value: "chrome-backbone-458221-m9"
+        - name: FIREBASE_CLIENT_EMAIL
+          value: "firebase-adminsdk@chrome-backbone-458221-m9.iam.gserviceaccount.com"
+        - name: FIREBASE_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: firebase-private-key
+              key: latest
+        
+        resources:
+          limits:
+            cpu: '1'
+            memory: 1Gi
+          requests:
+            cpu: '0.5'
+            memory: 512Mi
+        
+        # Startup probe - gives container time to start
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 3
+          timeoutSeconds: 5
+          failureThreshold: 10
+          successThreshold: 1
+        
+        # Liveness probe - restarts container if unhealthy
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        
+        # Readiness probe - removes from load balancer if not ready
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+          successThreshold: 1
+  
+  traffic:
+  - percent: 100
+    latestRevision: true
