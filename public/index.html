@@ -1,58 +1,124 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>WhatsApp Bot Status</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link href="/css/main.css" rel="stylesheet"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوت اشتراكات واتساب</title>
+    <meta name="description" content="نظام إدارة اشتراكات بوت واتساب">
+    <link rel="stylesheet" href="/css/auth.css">
+    <link rel="stylesheet" href="/css/components.css">
 </head>
-<body class="bg-light">
-<div class="container py-5">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">حالة البوت</h3>
-    <div>
-      <a class="btn btn-outline-primary btn-sm me-2" href="/admin.html">Admin</a>
-      <a class="btn btn-primary btn-sm" href="/user.html">User</a>
-    </div>
-  </div>
-  <div class="row g-4">
-    <div class="col-md-5">
-      <div class="card">
-        <div class="card-header">QR للاتصال بالبوت</div>
-        <div class="card-body text-center">
-          <img id="qr" class="img-fluid" alt="QR" />
-          <div class="small text-muted mt-2">إن لم يظهر QR فقد يكون البوت متصلًا بالفعل.</div>
-          <button class="btn btn-outline-secondary btn-sm mt-2" onclick="loadQR()">تحديث</button>
+<body>
+    <div class="container">
+        <div class="welcome-card">
+            <div class="logo">
+                <h1>🤖 بوت اشتراكات واتساب</h1>
+            </div>
+            
+            <div class="welcome-content">
+                <h2>مرحباً بك في نظام إدارة الاشتراكات</h2>
+                <p>قم بإدارة اشتراكاتك في بوت واتساب بسهولة وأمان</p>
+                
+                <div class="features">
+                    <div class="feature">
+                        <span class="feature-icon">✅</span>
+                        <span>إدارة الاشتراكات</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">💳</span>
+                        <span>دفع آمن</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">📊</span>
+                        <span>تقارير مفصلة</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">🔒</span>
+                        <span>حماية عالية</span>
+                    </div>
+                </div>
+                
+                <div class="actions">
+                    <a href="/login.html" class="btn btn-primary btn-lg">تسجيل الدخول</a>
+                    <a href="/register.html" class="btn btn-success btn-lg">إنشاء حساب جديد</a>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-    <div class="col-md-7">
-      <div class="card">
-        <div class="card-header">الإحصائيات</div>
-        <div class="card-body">
-          <div><b>الحالة:</b> <span id="status">—</span></div>
-          <div><b>زمن التشغيل:</b> <span id="uptime">—</span> ثانية</div>
-          <div><b>إجمالي الرسائل:</b> <span id="total">—</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-async function loadStatus(){
-  const r = await fetch('/api/status'); const j = await r.json();
-  status.textContent = j.connected ? 'متصل' : 'غير متصل';
-  uptime.textContent = j.uptimeSeconds;
-  total.textContent = j.globalMessagesSent;
-}
-async function loadQR(){
-  const r = await fetch('/api/qr.png');
-  if(r.status === 204){ document.getElementById('qr').style.display='none'; return; }
-  const blob = await r.blob(); const url = URL.createObjectURL(blob);
-  const img = document.getElementById('qr'); img.style.display='block'; img.src = url;
-}
-loadStatus(); loadQR(); setInterval(loadStatus, 4000);
-</script>
+
+    <footer class="footer">
+        <p>&copy; 2024 بوت اشتراكات واتساب. جميع الحقوق محفوظة.</p>
+    </footer>
+
+    <style>
+        .welcome-card {
+            max-width: 600px;
+            margin: 50px auto;
+            text-align: center;
+        }
+        
+        .logo h1 {
+            color: #007bff;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .welcome-content h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .welcome-content p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .feature-icon {
+            font-size: 20px;
+        }
+        
+        .actions {
+            margin-top: 30px;
+        }
+        
+        .actions .btn {
+            margin: 0 10px;
+            min-width: 150px;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+            margin-top: 50px;
+        }
+        
+        @media (max-width: 768px) {
+            .actions .btn {
+                display: block;
+                margin: 10px auto;
+                width: 200px;
+            }
+        }
+    </style>
 </body>
 </html>

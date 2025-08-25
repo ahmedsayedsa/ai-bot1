@@ -1,18 +1,32 @@
-FROM node:20-slim
+# Use Node.js 20 Alpine for smaller image size
+FROM node:20-alpine
 
+# Set working directory
 WORKDIR /app
-ENV NODE_ENV=production
-ENV PORT=8080
 
-# Install deps
-COPY package.json package-lock.json* ./
-RUN npm install --production
+# Copy package files
+COPY package*.json ./
 
-# Copy source and public
-COPY index.js ./
-COPY public ./public/
-# Ensure session dir exists
-RUN mkdir -p auth_info_session
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
 
+# Copy source code
+COPY . .
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# Change ownership of app directory
+RUN chown -R nextjs:nodejs /app
+USER nextjs
+
+# Expose port
 EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node healthcheck.js
+
+# Start the application
 CMD ["npm", "start"]
