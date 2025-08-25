@@ -3,506 +3,438 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - WhatsApp Bot</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .card-shadow { box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
-        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: none; border-radius: 15px; width: 80%; max-width: 500px; }
-        .toast { position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 8px; color: white; z-index: 1001; transform: translateX(400px); transition: transform 0.3s ease; }
-        .toast.show { transform: translateX(0); }
-        .toast.success { background-color: #10B981; }
-        .toast.error { background-color: #EF4444; }
-    </style>
+    <title>لوحة التحكم الإدارية - بوت اشتراكات واتساب</title>
+    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <meta name="description" content="لوحة تحكم إدارية لإدارة اشتراكات واتساب">
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <!-- Login Modal -->
-    <div id="loginModal" class="modal" style="display: flex;">
-        <div class="modal-content">
-            <div class="text-center mb-6">
-                <i class="fas fa-lock text-4xl text-blue-500 mb-4"></i>
-                <h2 class="text-2xl font-bold text-gray-800">تسجيل دخول الإدارة</h2>
-                <p class="text-gray-600">يرجى إدخال بيانات الإدارة للدخول</p>
+<body>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>لوحة التحكم</h2>
+                <div class="user-info">
+                    <span id="adminName">المدير</span>
+                    <span id="adminRole">إداري</span>
+                </div>
             </div>
-            <form id="loginForm">
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">اسم المستخدم</label>
-                    <input type="text" id="username" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500" required>
-                </div>
-                <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">كلمة المرور</label>
-                    <input type="password" id="password" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500" required>
-                </div>
-                <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
-                    <i class="fas fa-sign-in-alt ml-2"></i>دخول
+            
+            <ul class="sidebar-menu">
+                <li class="menu-item active">
+                    <a href="#dashboard" data-section="dashboard">
+                        <i class="icon-dashboard"></i>
+                        لوحة المعلومات
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="#users" data-section="users">
+                        <i class="icon-users"></i>
+                        إدارة المستخدمين
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="#subscriptions" data-section="subscriptions">
+                        <i class="icon-subscriptions"></i>
+                        إدارة الاشتراكات
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="#payments" data-section="payments">
+                        <i class="icon-payments"></i>
+                        إدارة المدفوعات
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="#whatsapp" data-section="whatsapp">
+                        <i class="icon-whatsapp"></i>
+                        إعدادات واتساب
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="#settings" data-section="settings">
+                        <i class="icon-settings"></i>
+                        الإعدادات العامة
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <button id="logoutButton" class="logout-button">
+                    <i class="icon-logout"></i>
+                    تسجيل الخروج
                 </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div id="mainContent" style="display: none;">
-        <!-- Header -->
-        <nav class="bg-white shadow-lg">
-            <div class="container mx-auto px-4 py-3">
-                <div class="flex justify-between items-center">
-                    <div class="flex items-center space-x-4 rtl:space-x-reverse">
-                        <i class="fas fa-cog text-blue-500 text-3xl"></i>
-                        <h1 class="text-2xl font-bold text-gray-800">لوحة الإدارة</h1>
-                    </div>
-                    <div class="flex space-x-2 rtl:space-x-reverse">
-                        <a href="/" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition duration-200">
-                            <i class="fas fa-home ml-2"></i>الرئيسية
-                        </a>
-                        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-200">
-                            <i class="fas fa-sign-out-alt ml-2"></i>خروج
-                        </button>
-                    </div>
-                </div>
             </div>
         </nav>
-
-        <div class="container mx-auto px-4 py-8">
-            <!-- Quick Stats -->
-            <div id="statsRow" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <!-- Stats will be loaded here -->
-            </div>
-
-            <!-- Add User Section -->
-            <div class="bg-white rounded-xl card-shadow p-6 mb-8">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">
-                    <i class="fas fa-user-plus text-blue-500 ml-2"></i>إضافة/تحديث مستخدم
-                </h2>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-title">
+                    <h1 id="sectionTitle">لوحة المعلومات</h1>
+                    <p id="sectionDescription">مرحباً بك في لوحة التحكم الإدارية</p>
+                </div>
+                <div class="header-actions">
+                    <button id="refreshButton" class="action-button">
+                        <i class="icon-refresh"></i>
+                        تحديث
+                    </button>
+                    <div class="notification-bell">
+                        <i class="icon-bell"></i>
+                        <span id="notificationCount" class="notification-count hidden">0</span>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="content-section active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon users-icon"></div>
+                        <div class="stat-info">
+                            <h3 id="totalUsers">0</h3>
+                            <p>إجمالي المستخدمين</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon subscriptions-icon"></div>
+                        <div class="stat-info">
+                            <h3 id="activeSubscriptions">0</h3>
+                            <p>الاشتراكات النشطة</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon revenue-icon"></div>
+                        <div class="stat-info">
+                            <h3 id="totalRevenue">$0</h3>
+                            <p>إجمالي الإيرادات</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon messages-icon"></div>
+                        <div class="stat-info">
+                            <h3 id="messagesSent">0</h3>
+                            <p>الرسائل المرسلة اليوم</p>
+                        </div>
+                    </div>
+                </div>
                 
-                <form id="userForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2">رقم الهاتف</label>
-                        <input type="text" id="phoneNumber" placeholder="966501234567" 
-                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500" required>
+                <div class="charts-section">
+                    <div class="chart-card">
+                        <h3>نمو المستخدمين</h3>
+                        <div id="usersChart" class="chart-container"></div>
                     </div>
-                    
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2">الاسم</label>
-                        <input type="text" id="userName" placeholder="أحمد محمد" 
-                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500" required>
+                    <div class="chart-card">
+                        <h3>الإيرادات الشهرية</h3>
+                        <div id="revenueChart" class="chart-container"></div>
                     </div>
-                    
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2">حالة الاشتراك</label>
-                        <select id="userStatus" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
-                            <option value="active">نشط</option>
-                            <option value="inactive">غير نشط</option>
-                            <option value="suspended">معلق</option>
-                        </select>
+                </div>
+                
+                <div class="recent-activity">
+                    <h3>النشاط الأخير</h3>
+                    <div id="activityList" class="activity-list"></div>
+                </div>
+            </section>
+            
+            <!-- Users Section -->
+            <section id="users-section" class="content-section">
+                <div class="section-toolbar">
+                    <div class="search-box">
+                        <input type="text" id="usersSearch" placeholder="البحث عن مستخدم...">
+                        <i class="icon-search"></i>
                     </div>
-                    
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2">مدة الاشتراك (بالأيام)</label>
-                        <input type="number" id="subscriptionDays" value="30" min="1" max="365"
-                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
-                    </div>
-                    
-                    <div class="md:col-span-2">
-                        <label class="block text-gray-700 text-sm font-bold mb-2">رسالة الترحيب</label>
-                        <textarea id="welcomeMessage" rows="3" placeholder="مرحباً بك! 👋"
-                                  class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"></textarea>
-                    </div>
-                    
-                    <div class="md:col-span-2">
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition duration-200">
-                            <i class="fas fa-save ml-2"></i>حفظ المستخدم
-                        </button>
-                        <button type="button" onclick="clearForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition duration-200 mr-2">
-                            <i class="fas fa-eraser ml-2"></i>مسح
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Users Table -->
-            <div class="bg-white rounded-xl card-shadow p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-gray-800">
-                        <i class="fas fa-users text-green-500 ml-2"></i>قائمة المستخدمين
-                    </h2>
-                    <button onclick="loadUsers()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition duration-200">
-                        <i class="fas fa-sync-alt ml-1"></i>تحديث
+                    <button id="addUserButton" class="primary-button">
+                        <i class="icon-plus"></i>
+                        إضافة مستخدم
                     </button>
                 </div>
-
-                <!-- Search Box -->
-                <div class="mb-4">
-                    <input type="text" id="searchInput" placeholder="البحث برقم الهاتف أو الاسم..." 
-                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                           oninput="filterUsers()">
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full table-auto">
+                
+                <div class="table-container">
+                    <table id="usersTable" class="data-table">
                         <thead>
-                            <tr class="bg-gray-50">
-                                <th class="px-4 py-2 text-right">رقم الهاتف</th>
-                                <th class="px-4 py-2 text-right">الاسم</th>
-                                <th class="px-4 py-2 text-right">الحالة</th>
-                                <th class="px-4 py-2 text-right">تاريخ الانتهاء</th>
-                                <th class="px-4 py-2 text-right">الرسائل</th>
-                                <th class="px-4 py-2 text-right">الإجراءات</th>
+                            <tr>
+                                <th>الاسم</th>
+                                <th>البريد الإلكتروني</th>
+                                <th>رقم الواتساب</th>
+                                <th>حالة الاشتراك</th>
+                                <th>تاريخ التسجيل</th>
+                                <th>الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
-                            <tr>
-                                <td colspan="6" class="text-center py-8 text-gray-500">
-                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                                    <div>جاري تحميل البيانات...</div>
-                                </td>
-                            </tr>
+                            <!-- Dynamic content -->
                         </tbody>
                     </table>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Modal -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold">تعديل المستخدم</h3>
-                <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <form id="editForm">
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">رسالة الترحيب</label>
-                    <textarea id="editWelcomeMessage" rows="4" 
-                              class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"></textarea>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">إضافة أيام للاشتراك</label>
-                    <input type="number" id="additionalDays" value="30" min="1" max="365"
-                           class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
-                </div>
-                <div class="flex justify-end">
-                    <button type="button" onclick="closeEditModal()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-200 ml-2">
-                        إلغاء
-                    </button>
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-200">
-                        حفظ التعديل
+                
+                <div id="usersPagination" class="pagination"></div>
+            </section>
+            
+            <!-- Subscriptions Section -->
+            <section id="subscriptions-section" class="content-section">
+                <div class="section-toolbar">
+                    <div class="filter-group">
+                        <select id="subscriptionStatusFilter">
+                            <option value="">كل الحالات</option>
+                            <option value="active">نشط</option>
+                            <option value="expired">منتهي</option>
+                            <option value="cancelled">ملغي</option>
+                        </select>
+                        <select id="subscriptionPlanFilter">
+                            <option value="">كل الخطط</option>
+                            <option value="basic">أساسية</option>
+                            <option value="premium">مميزة</option>
+                            <option value="enterprise">للشركات</option>
+                        </select>
+                    </div>
+                    <button id="createPlanButton" class="primary-button">
+                        <i class="icon-plus"></i>
+                        إضافة خطة جديدة
                     </button>
                 </div>
-            </form>
-        </div>
+                
+                <div class="table-container">
+                    <table id="subscriptionsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>المستخدم</th>
+                                <th>الخطة</th>
+                                <th>تاريخ البداية</th>
+                                <th>تاريخ الانتهاء</th>
+                                <th>الحالة</th>
+                                <th>المبلغ</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subscriptionsTableBody">
+                            <!-- Dynamic content -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Payments Section -->
+            <section id="payments-section" class="content-section">
+                <div class="section-toolbar">
+                    <div class="date-range">
+                        <input type="date" id="startDate">
+                        <input type="date" id="endDate">
+                        <button id="filterPayments" class="secondary-button">تصفية</button>
+                    </div>
+                    <div class="export-actions">
+                        <button id="exportPayments" class="secondary-button">
+                            <i class="icon-download"></i>
+                            تصدير
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table id="paymentsTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>رقم المعاملة</th>
+                                <th>المستخدم</th>
+                                <th>المبلغ</th>
+                                <th>طريقة الدفع</th>
+                                <th>الحالة</th>
+                                <th>التاريخ</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentsTableBody">
+                            <!-- Dynamic content -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- WhatsApp Section -->
+            <section id="whatsapp-section" class="content-section">
+                <div class="whatsapp-config">
+                    <h3>إعدادات واتساب API</h3>
+                    <form id="whatsappConfigForm" class="config-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="whatsappToken">API Token</label>
+                                <input type="password" id="whatsappToken" name="whatsappToken">
+                            </div>
+                            <div class="form-group">
+                                <label for="whatsappPhoneId">Phone Number ID</label>
+                                <input type="text" id="whatsappPhoneId" name="whatsappPhoneId">
+                            </div>
+                            <div class="form-group">
+                                <label for="webhookUrl">Webhook URL</label>
+                                <input type="url" id="webhookUrl" name="webhookUrl">
+                            </div>
+                            <div class="form-group">
+                                <label for="verifyToken">Verify Token</label>
+                                <input type="password" id="verifyToken" name="verifyToken">
+                            </div>
+                        </div>
+                        <button type="submit" class="primary-button">حفظ الإعدادات</button>
+                    </form>
+                </div>
+                
+                <div class="whatsapp-status">
+                    <h3>حالة الاتصال</h3>
+                    <div id="connectionStatus" class="status-indicator">
+                        <span class="status-dot"></span>
+                        <span class="status-text">غير متصل</span>
+                    </div>
+                    <button id="testConnection" class="secondary-button">اختبار الاتصال</button>
+                </div>
+                
+                <div class="message-templates">
+                    <h3>قوالب الرسائل</h3>
+                    <div id="templatesContainer" class="templates-grid"></div>
+                    <button id="addTemplate" class="primary-button">
+                        <i class="icon-plus"></i>
+                        إضافة قالب
+                    </button>
+                </div>
+            </section>
+            
+            <!-- Settings Section -->
+            <section id="settings-section" class="content-section">
+                <div class="settings-tabs">
+                    <nav class="tabs-nav">
+                        <button class="tab-button active" data-tab="general">عام</button>
+                        <button class="tab-button" data-tab="security">الأمان</button>
+                        <button class="tab-button" data-tab="notifications">الإشعارات</button>
+                        <button class="tab-button" data-tab="backup">النسخ الاحتياطي</button>
+                    </nav>
+                    
+                    <div class="tab-content">
+                        <div id="general-tab" class="tab-panel active">
+                            <form id="generalSettingsForm" class="settings-form">
+                                <div class="form-group">
+                                    <label for="siteName">اسم الموقع</label>
+                                    <input type="text" id="siteName" name="siteName">
+                                </div>
+                                <div class="form-group">
+                                    <label for="supportEmail">بريد الدعم</label>
+                                    <input type="email" id="supportEmail" name="supportEmail">
+                                </div>
+                                <div class="form-group">
+                                    <label for="currency">العملة</label>
+                                    <select id="currency" name="currency">
+                                        <option value="USD">دولار أمريكي</option>
+                                        <option value="EUR">يورو</option>
+                                        <option value="EGP">جنيه مصري</option>
+                                        <option value="SAR">ريال سعودي</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="primary-button">حفظ الإعدادات</button>
+                            </form>
+                        </div>
+                        
+                        <div id="security-tab" class="tab-panel">
+                            <form id="securitySettingsForm" class="settings-form">
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="twoFactorAuth">
+                                        <span class="checkmark"></span>
+                                        تفعيل المصادقة الثنائية
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="loginNotifications">
+                                        <span class="checkmark"></span>
+                                        إشعارات تسجيل الدخول
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sessionTimeout">مهلة الجلسة (بالدقائق)</label>
+                                    <input type="number" id="sessionTimeout" name="sessionTimeout" min="15" max="1440">
+                                </div>
+                                <button type="submit" class="primary-button">حفظ الإعدادات</button>
+                            </form>
+                        </div>
+                        
+                        <div id="notifications-tab" class="tab-panel">
+                            <form id="notificationSettingsForm" class="settings-form">
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="emailNotifications">
+                                        <span class="checkmark"></span>
+                                        الإشعارات عبر البريد الإلكتروني
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="smsNotifications">
+                                        <span class="checkmark"></span>
+                                        الإشعارات عبر الرسائل النصية
+                                    </label>
+                                </div>
+                                <button type="submit" class="primary-button">حفظ الإعدادات</button>
+                            </form>
+                        </div>
+                        
+                        <div id="backup-tab" class="tab-panel">
+                            <div class="backup-section">
+                                <h4>النسخ الاحتياطي التلقائي</h4>
+                                <form id="backupSettingsForm" class="settings-form">
+                                    <div class="form-group">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="autoBackup">
+                                            <span class="checkmark"></span>
+                                            تفعيل النسخ التلقائي
+                                        </label>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="backupFrequency">تكرار النسخ</label>
+                                        <select id="backupFrequency">
+                                            <option value="daily">يومي</option>
+                                            <option value="weekly">أسبوعي</option>
+                                            <option value="monthly">شهري</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="primary-button">حفظ الإعدادات</button>
+                                </form>
+                                
+                                <div class="backup-actions">
+                                    <button id="createBackup" class="secondary-button">
+                                        <i class="icon-backup"></i>
+                                        إنشاء نسخة احتياطية
+                                    </button>
+                                    <button id="restoreBackup" class="secondary-button">
+                                        <i class="icon-restore"></i>
+                                        استعادة نسخة احتياطية
+                                    </button>
+                                </div>
+                                
+                                <div id="backupHistory" class="backup-history">
+                                    <h4>سجل النسخ الاحتياطية</h4>
+                                    <div id="backupList" class="backup-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
-
-    <script>
-        let allUsers = [];
-        let currentEditUser = null;
-
-        // Default admin credentials (يفضل تغييرها في الإنتاج)
-        const ADMIN_USERNAME = 'admin';
-        const ADMIN_PASSWORD = 'admin123';
-
-        // التحقق من تسجيل الدخول
-        function checkAuth() {
-            const isLoggedIn = localStorage.getItem('adminLoggedIn');
-            if (isLoggedIn === 'true') {
-                document.getElementById('loginModal').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                loadData();
-            }
-        }
-
-        // تسجيل الدخول
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-                localStorage.setItem('adminLoggedIn', 'true');
-                document.getElementById('loginModal').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                showToast('تم تسجيل الدخول بنجاح!', 'success');
-                loadData();
-            } else {
-                showToast('بيانات الدخول غير صحيحة!', 'error');
-            }
-        });
-
-        // تسجيل الخروج
-        function logout() {
-            localStorage.removeItem('adminLoggedIn');
-            location.reload();
-        }
-
-        // تحميل البيانات
-        async function loadData() {
-            await Promise.all([loadStats(), loadUsers()]);
-        }
-
-        // تحميل الإحصائيات
-        async function loadStats() {
-            try {
-                const response = await fetch('/api/stats');
-                const stats = await response.json();
-                
-                document.getElementById('statsRow').innerHTML = `
-                    <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="text-2xl font-bold">${stats.totalUsers || 0}</div>
-                                <div class="text-blue-100">إجمالي المستخدمين</div>
-                            </div>
-                            <i class="fas fa-users text-3xl text-blue-200"></i>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="text-2xl font-bold">${stats.activeUsers || 0}</div>
-                                <div class="text-green-100">المستخدمين النشطين</div>
-                            </div>
-                            <i class="fas fa-user-check text-3xl text-green-200"></i>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="text-2xl font-bold">${stats.totalMessages || 0}</div>
-                                <div class="text-purple-100">الرسائل المُرسلة</div>
-                            </div>
-                            <i class="fas fa-envelope text-3xl text-purple-200"></i>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="text-2xl font-bold">${stats.totalOrders || 0}</div>
-                                <div class="text-orange-100">إجمالي الطلبات</div>
-                            </div>
-                            <i class="fas fa-shopping-cart text-3xl text-orange-200"></i>
-                        </div>
-                    </div>
-                `;
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
-        }
-
-        // تحميل المستخدمين
-        async function loadUsers() {
-            try {
-                const response = await fetch('/api/users');
-                const data = await response.json();
-                allUsers = data.users;
-                displayUsers(allUsers);
-            } catch (error) {
-                console.error('Error loading users:', error);
-                document.getElementById('usersTableBody').innerHTML = 
-                    '<tr><td colspan="6" class="text-center py-4 text-red-500">حدث خطأ في تحميل البيانات</td></tr>';
-            }
-        }
-
-        // عرض المستخدمين في الجدول
-        function displayUsers(users) {
-            const tbody = document.getElementById('usersTableBody');
-            
-            if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">لا توجد بيانات</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = users.map(user => {
-                const endDate = new Date(user.endDate);
-                const isExpired = endDate < new Date();
-                const statusClass = user.status === 'active' && !isExpired ? 'text-green-600' : 'text-red-600';
-                const statusText = user.status === 'active' && !isExpired ? 'نشط' : 'منتهي';
-                
-                return `
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-3">${user.phoneNumber}</td>
-                        <td class="px-4 py-3">${user.name}</td>
-                        <td class="px-4 py-3">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${statusClass}">
-                                ${statusText}
-                            </span>
-                        </td>
-                        <td class="px-4 py-3">${endDate.toLocaleDateString('ar')}</td>
-                        <td class="px-4 py-3">${user.messageCount || 0}</td>
-                        <td class="px-4 py-3">
-                            <button onclick="editUser('${user.phoneNumber}')" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs transition duration-200 ml-1">
-                                <i class="fas fa-edit"></i> تعديل
-                            </button>
-                            <button onclick="deleteUser('${user.phoneNumber}')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition duration-200">
-                                <i class="fas fa-trash"></i> حذف
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        // البحث في المستخدمين
-        function filterUsers() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const filteredUsers = allUsers.filter(user => 
-                user.phoneNumber.toLowerCase().includes(searchTerm) ||
-                user.name.toLowerCase().includes(searchTerm)
-            );
-            displayUsers(filteredUsers);
-        }
-
-        // إضافة/تحديث مستخدم
-        document.getElementById('userForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const formData = {
-                phoneNumber: document.getElementById('phoneNumber').value,
-                name: document.getElementById('userName').value,
-                status: document.getElementById('userStatus').value,
-                daysToAdd: parseInt(document.getElementById('subscriptionDays').value),
-                welcomeMessage: document.getElementById('welcomeMessage').value || 'مرحباً بك! 👋'
-            };
-
-            try {
-                const response = await fetch('/api/users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    showToast('تم حفظ المستخدم بنجاح!', 'success');
-                    clearForm();
-                    loadUsers();
-                    loadStats();
-                } else {
-                    showToast('حدث خطأ: ' + result.error, 'error');
-                }
-            } catch (error) {
-                console.error('Error saving user:', error);
-                showToast('حدث خطأ في الحفظ!', 'error');
-            }
-        });
-
-        // مسح النموذج
-        function clearForm() {
-            document.getElementById('userForm').reset();
-            document.getElementById('subscriptionDays').value = '30';
-            document.getElementById('welcomeMessage').value = '';
-        }
-
-        // تعديل المستخدم
-        function editUser(phoneNumber) {
-            const user = allUsers.find(u => u.phoneNumber === phoneNumber);
-            if (user) {
-                currentEditUser = phoneNumber;
-                document.getElementById('editWelcomeMessage').value = user.welcomeMessage || '';
-                document.getElementById('editModal').style.display = 'block';
-            }
-        }
-
-        // إغلاق نافذة التعديل
-        function closeEditModal() {
-            document.getElementById('editModal').style.display = 'none';
-            currentEditUser = null;
-        }
-
-        // حفظ التعديل
-        document.getElementById('editForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            if (!currentEditUser) return;
-
-            const welcomeMessage = document.getElementById('editWelcomeMessage').value;
-            const additionalDays = parseInt(document.getElementById('additionalDays').value);
-
-            try {
-                // تحديث رسالة الترحيب
-                await fetch('/api/template', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        phoneNumber: currentEditUser,
-                        welcomeMessage: welcomeMessage
-                    })
-                });
-
-                // إضافة أيام للاشتراك
-                const user = allUsers.find(u => u.phoneNumber === currentEditUser);
-                await fetch('/api/users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        phoneNumber: currentEditUser,
-                        name: user.name,
-                        status: user.status,
-                        daysToAdd: additionalDays,
-                        welcomeMessage: welcomeMessage
-                    })
-                });
-
-                showToast('تم تحديث المستخدم بنجاح!', 'success');
-                closeEditModal();
-                loadUsers();
-            } catch (error) {
-                console.error('Error updating user:', error);
-                showToast('حدث خطأ في التحديث!', 'error');
-            }
-        });
-
-        // حذف المستخدم
-        async function deleteUser(phoneNumber) {
-            if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/users/${phoneNumber}`, {
-                    method: 'DELETE'
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    showToast('تم حذف المستخدم بنجاح!', 'success');
-                    loadUsers();
-                    loadStats();
-                } else {
-                    showToast('حدث خطأ في الحذف!', 'error');
-                }
-            } catch (error) {
-                console.error('Error deleting user:', error);
-                showToast('حدث خطأ في الحذف!', 'error');
-            }
-        }
-
-        // عرض رسالة التنبيه
-        function showToast(message, type) {
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            
-            document.body.appendChild(toast);
-            
-            setTimeout(() => toast.classList.add('show'), 100);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => document.body.removeChild(toast), 300);
-            }, 3000);
-        }
-
-        // بدء التطبيق
-        document.addEventListener('DOMContentLoaded', checkAuth);
-    </script>
+    
+    <!-- Modals -->
+    <div id="modalOverlay" class="modal-overlay hidden"></div>
+    <div id="userModal" class="modal hidden"></div>
+    <div id="subscriptionModal" class="modal hidden"></div>
+    <div id="paymentModal" class="modal hidden"></div>
+    <div id="templateModal" class="modal hidden"></div>
+    
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator" class="loading-indicator hidden">
+        <div class="spinner"></div>
+        <p>جاري التحميل...</p>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="/js/common.js"></script>
+    <script src="/js/admin.js"></script>
+    <script src="/js/dashboard.js"></script>
+    <script src="/js/modals.js"></script>
 </body>
 </html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إنشاء حساب - بوت اشتراكات واتساب</title>
+    <link rel="stylesheet" href="/css/auth.css">
+    <meta name="description" content="إنشاء حساب جديد لإدارة اشتراكات واتساب">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>إنشاء حساب جديد</h1>
+                <p>انضم إلى نظام إدارة اشتراكات واتساب</p>
+            </div>
+            
+            <form id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label for="firstName">الاسم الأول</label>
+                    <input type="text" id="firstName" name="firstName" required>
+                    <span class="error-message" id="firstNameError"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="lastName">الاسم الأخير</label>
+                    <input type="text" id="lastName" name="lastName" required>
+                    <span class="error-message" id="lastNameError"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">البريد الإلكتروني</label>
+                    <input type="email" id="email" name="email" required>
+                    <span class="error-message" id="emailError"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="whatsappNumber">رقم الواتساب (اختياري)</label>
+                    <input type="tel" id="whatsappNumber" name="whatsappNumber" placeholder="+20xxxxxxxxxx">
+                    <span class="error-message" id="whatsappNumberError"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">كلمة المرور</label>
+                    <input type="password" id="password" name="password" required>
+                    <div class="password-strength">
+                        <div class="strength-bar">
+                            <div id="strengthProgress" class="strength-progress"></div>
+                        </div>
+                        <span id="strengthText" class="strength-text">ضعيفة</span>
+                    </div>
+                    <span class="error-message" id="passwordError"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">تأكيد كلمة المرور</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required>
+                    <span class="error-message" id="confirmPasswordError"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="agreeTerms" name="agreeTerms" required>
+                        <span class="checkmark"></span>
+                        أوافق على <a href="/terms.html" target="_blank">الشروط والأحكام</a> و <a href="/privacy.html" target="_blank">سياسة الخصوصية</a>
+                    </label>
+                    <span class="error-message" id="agreeTermsError"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="subscribeNewsletter" name="subscribeNewsletter">
+                        <span class="checkmark"></span>
+                        أريد الحصول على تحديثات وعروض خاصة عبر البريد الإلكتروني
+                    </label>
+                </div>
+                
+                <button type="submit" id="registerButton" class="auth-button">
+                    <span class="button-text">إنشاء الحساب</span>
+                    <div class="loader hidden"></div>
+                </button>
+                
+                <div id="errorMessage" class="error-banner hidden"></div>
+                <div id="successMessage" class="success-banner hidden"></div>
+            </form>
+            
+            <div class="auth-footer">
+                <p><a href="/login.html">لديك حساب بالفعل؟ سجل دخولك</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/js/auth.js"></script>
+    <script src="/js/register.js"></script>
+</body>
+</html>
