@@ -1,74 +1,292 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>لوحة المستخدم</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link href="/css/main.css" rel="stylesheet"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة اشتراكات واتساب - بوابة المستخدم</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            margin-bottom: 1.5rem;
+        }
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.375rem 0.75rem;
+        }
+        .qr-container {
+            text-align: center;
+            padding: 2rem;
+        }
+        .qr-image {
+            max-width: 256px;
+            border: 2px solid #dee2e6;
+            border-radius: 0.5rem;
+        }
+        .usage-progress {
+            height: 1.5rem;
+        }
+        .plan-card {
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .plan-card:hover {
+            transform: translateY(-2px);
+        }
+        .plan-card.selected {
+            border-color: #0d6efd;
+            background-color: #f8f9ff;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .alert {
+            border-radius: 0.5rem;
+        }
+    </style>
 </head>
-<body class="bg-light">
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0">لوحة المستخدم</h3>
-    <button class="btn btn-outline-danger btn-sm" onclick="logout()">خروج</button>
-  </div>
-
-  <div id="loginBox" class="card mb-4">
-    <div class="card-header">تسجيل الدخول برقم الهاتف</div>
-    <div class="card-body">
-      <form id="loginForm" onsubmit="return doLogin(event)">
-        <div class="row g-2">
-          <div class="col-md-8"><input class="form-control" name="phone" placeholder="2010xxxxxxx" required/></div>
-          <div class="col-md-4"><button class="btn btn-primary w-100">دخول</button></div>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fab fa-whatsapp me-2"></i>
+                نظام إدارة اشتراكات واتساب
+            </a>
+            <div class="navbar-nav me-auto">
+                <div id="userInfo" class="navbar-text text-white hidden">
+                    مرحباً، <span id="userEmail"></span>
+                </div>
+            </div>
+            <div class="navbar-nav">
+                <button id="logoutBtn" class="btn btn-outline-light btn-sm hidden">
+                    <i class="fas fa-sign-out-alt me-1"></i>
+                    تسجيل الخروج
+                </button>
+            </div>
         </div>
-      </form>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Alerts -->
+        <div id="alertContainer"></div>
+
+        <!-- Authentication Section -->
+        <div id="authSection" class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <ul class="nav nav-tabs mb-3" id="authTabs">
+                            <li class="nav-item">
+                                <button class="nav-link active" id="loginTab" data-bs-toggle="tab" data-bs-target="#login">
+                                    تسجيل الدخول
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" id="registerTab" data-bs-toggle="tab" data-bs-target="#register">
+                                    إنشاء حساب جديد
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <!-- Login Form -->
+                            <div class="tab-pane fade show active" id="login">
+                                <form id="loginForm">
+                                    <div class="mb-3">
+                                        <label for="loginEmail" class="form-label">البريد الإلكتروني</label>
+                                        <input type="email" class="form-control" id="loginEmail" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="loginPassword" class="form-label">كلمة المرور</label>
+                                        <input type="password" class="form-control" id="loginPassword" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-sign-in-alt me-1"></i>
+                                        تسجيل الدخول
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Register Form -->
+                            <div class="tab-pane fade" id="register">
+                                <form id="registerForm">
+                                    <div class="mb-3">
+                                        <label for="registerEmail" class="form-label">البريد الإلكتروني</label>
+                                        <input type="email" class="form-control" id="registerEmail" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="registerPhone" class="form-label">رقم الهاتف</label>
+                                        <input type="tel" class="form-control" id="registerPhone" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="registerPassword" class="form-label">كلمة المرور</label>
+                                        <input type="password" class="form-control" id="registerPassword" required minlength="8">
+                                        <div class="form-text">يجب أن تكون كلمة المرور 8 أحرف على الأقل</div>
+                                    </div>
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i class="fas fa-user-plus me-1"></i>
+                                        إنشاء الحساب
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboardSection" class="hidden">
+            <!-- Subscription Status -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-crown me-2"></i>
+                                حالة الاشتراك
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="subscriptionInfo">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h6 id="currentPlan">الخطة الحالية: غير محدد</h6>
+                                        <span id="subscriptionStatus" class="badge status-badge bg-secondary">تجريبي</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted">تاريخ الانتهاء</small>
+                                        <div id="expiryDate" class="fw-bold">غير محدد</div>
+                                    </div>
+                                </div>
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button id="upgradeBtn" class="btn btn-primary">
+                                        <i class="fas fa-arrow-up me-1"></i>
+                                        ترقية الخطة
+                                    </button>
+                                    <button id="renewBtn" class="btn btn-success hidden">
+                                        <i class="fas fa-sync me-1"></i>
+                                        تجديد الاشتراك
+                                    </button>
+                                    <button id="cancelBtn" class="btn btn-outline-danger hidden">
+                                        <i class="fas fa-times me-1"></i>
+                                        إلغاء التجديد
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Usage Statistics -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                إحصائيات الاستخدام
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>الرسائل المستخدمة</span>
+                                    <span id="usageText">0 / 0</span>
+                                </div>
+                                <div class="progress usage-progress">
+                                    <div id="usageProgress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="h4 text-primary mb-0" id="messagesUsed">0</div>
+                                    <small class="text-muted">مستخدمة</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="h4 text-success mb-0" id="messagesRemaining">0</div>
+                                    <small class="text-muted">متبقية</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="h4 text-info mb-0" id="messageLimit">0</div>
+                                    <small class="text-muted">الحد الأقصى</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WhatsApp Connection -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fab fa-whatsapp me-2"></i>
+                                ربط واتساب
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="qr-container">
+                                <div id="whatsappStatus" class="mb-3">
+                                    <span id="deviceStatus" class="badge bg-secondary">غير متصل</span>
+                                </div>
+                                <div id="qrCodeContainer">
+                                    <img id="qrImage" class="qr-image hidden" alt="QR Code">
+                                    <div id="qrPlaceholder" class="text-muted">
+                                        <i class="fas fa-qrcode fa-3x mb-2"></i>
+                                        <p>اضغط لإنشاء رمز QR</p>
+                                    </div>
+                                </div>
+                                <button id="refreshQRBtn" class="btn btn-outline-primary btn-sm mt-3">
+                                    <i class="fas fa-sync me-1"></i>
+                                    تحديث الرمز
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plans Selection Modal -->
+            <div class="modal fade" id="plansModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">اختيار الخطة</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="plansContainer" class="row">
+                                <!-- Plans will be loaded here -->
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                            <button id="subscribeToPlanBtn" class="btn btn-primary" disabled>
+                                <i class="fas fa-credit-card me-1"></i>
+                                اشترك الآن
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div id="userUI" style="display:none">
-    <div class="row g-4">
-      <div class="col-md-4">
-        <div class="card">
-          <div class="card-header">QR للاتصال بالبوت</div>
-          <div class="card-body text-center">
-            <img id="qr" class="img-fluid" alt="QR"/>
-            <div class="small text-muted mt-2">إن لم يظهر QR، فالبوت متصل بالفعل.</div>
-            <button class="btn btn-outline-secondary btn-sm mt-2" onclick="loadQR()">تحديث</button>
-          </div>
-        </div>
-        <div class="card mt-3">
-          <div class="card-header">Webhook Easy Order</div>
-          <div class="card-body">
-            <code id="webhook">—</code>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-8">
-        <div class="card mb-3">
-          <div class="card-header">بيانات الاشتراك</div>
-          <div class="card-body">
-            <div><b>الحالة:</b> <span id="status">—</span></div>
-            <div><b>الانتهاء:</b> <span id="endDate">—</span></div>
-            <div><b>مرسلة لك:</b> <span id="sent">—</span></div>
-            <div class="mt-2"><b>حالة البوت:</b> <span id="bot">—</span>, <b>Uptime:</b> <span id="uptime">—</span>s</div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header">قالب الرسالة</div>
-          <div class="card-body">
-            <form id="tmplForm" onsubmit="return saveTemplate(event)">
-              <textarea class="form-control" name="template" rows="4" placeholder="مثال: مرحبًا {name}! تفاصيل طلبك:\n{order}"></textarea>
-              <button class="btn btn-primary mt-2">حفظ</button>
-            </form>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-<script src="/js/user.js"></script>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/user.js"></script>
 </body>
 </html>
