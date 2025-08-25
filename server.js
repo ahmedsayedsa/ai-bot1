@@ -28,18 +28,13 @@ const paymentsRoutes = require('./routes/payments');
 class Server {
     constructor() {
         this.app = express();
-        // نقرأ البورت من متغير البيئة أو نستخدم 8080 محليًا
-        const port = process.env.PORT || 8080;
-        app.listen(port, '0.0.0.0', () => {
-      console.log(`Server running on port ${port}`);
+        this.port = process.env.PORT || 8080;
     }
 
     setupMiddlewares() {
-        // Body parsing
         this.app.use(express.json({ limit: '10mb' }));
         this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-        // Security headers
         this.app.use(helmet({
             contentSecurityPolicy: {
                 directives: {
@@ -57,7 +52,6 @@ class Server {
             crossOriginEmbedderPolicy: false
         }));
 
-        // CORS
         this.app.use(cors({
             origin: env.NODE_ENV === 'production'
                 ? [env.FRONTEND_URL]
@@ -67,10 +61,8 @@ class Server {
             allowedHeaders: ['Content-Type', 'Authorization']
         }));
 
-        // Compression
         this.app.use(compression());
 
-        // منع الكاش أثناء التطوير
         this.app.use((req, res, next) => {
             res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
             res.setHeader('Pragma', 'no-cache');
@@ -78,17 +70,14 @@ class Server {
             next();
         });
 
-        // Rate limiting
         this.app.use(rateLimitMiddleware);
 
-        // Static files
         this.app.use(express.static(path.join(__dirname, '../public'), {
             maxAge: env.NODE_ENV === 'production' ? '1d' : '0',
             etag: true,
             lastModified: true
         }));
 
-        // Request logging
         this.app.use((req, res, next) => {
             logger.info(`${req.method} ${req.path}`, {
                 ip: req.ip,
@@ -100,7 +89,6 @@ class Server {
     }
 
     setupRoutes() {
-        // Health check
         this.app.get('/health', (req, res) => {
             res.status(200).json({
                 status: 'healthy',
@@ -111,13 +99,11 @@ class Server {
             });
         });
 
-        // API routes
         this.app.use('/api/auth', authRoutes);
         this.app.use('/api/user', userRoutes);
         this.app.use('/api/admin', adminRoutes);
         this.app.use('/api/payments', paymentsRoutes);
 
-        // Simple login test route
         this.app.post('/api/login', (req, res) => {
             const { email, password } = req.body;
             if (email === 'test@example.com' && password === '123456') {
@@ -134,17 +120,14 @@ class Server {
             }
         });
 
-        // CSP override for HTML pages
         this.app.use('/admin.html', cspOverride);
         this.app.use('/user.html', cspOverride);
 
-        // HTML pages
         this.app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
         this.app.get('/register', (req, res) => res.sendFile(path.join(__dirname, '../public/register.html')));
         this.app.get('/user', (req, res) => res.sendFile(path.join(__dirname, '../public/user.html')));
         this.app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '../public/admin.html')));
 
-        // 404 handler
         this.app.use('*', (req, res) => {
             if (req.path.startsWith('/api/')) {
                 res.status(404).json({
@@ -182,23 +165,29 @@ class Server {
     }
 
     async start() {
+        // تجهيز الـ middlewares والـ routes قبل التشغيل
+        this.setupMiddlewares();
+        this.setupRoutes();
+        this.setupErrorHandling();
+
+        // شغّل السيرفر فورًا عشان Cloud Run يعدّي الـ health check
+        this.server = this.app.listen(this.port, '0.0.0.0', () => {
+            logger.info(`🚀 Server running on port ${this.port}`, {
+                environment: env.NODE_ENV,
+                port: this.port,
+                timestamp: new Date().toISOString()
+            });
+        });
+
+        // تهيئة Firebase في الخلفية
         try {
             await initializeFirebase();
-            logger.info('Firebase initialized successfully');
-
-            this.server = this.app.listen(this.port, '0.0.0.0', () => {
-                logger.info(`Server running on port ${this.port}`, {
-                    environment: env.NODE_ENV,
-                    port: this.port,
-                    timestamp: new Date().toISOString()
-                });
-            });
-
-            return this.server;
+            logger.info('✅ Firebase initialized successfully');
         } catch (error) {
-            logger.error('Failed to start server:', error);
-            process.exit(1);
+            logger.error('❌ Firebase initialization failed:', error);
         }
+
+        return this.server;
     }
 }
 
