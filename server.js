@@ -3,40 +3,32 @@
  * WhatsApp Subscription Bot
  */
 
-// --- استيراد الوحدات (ESM Syntax) ---
-import express from 'express';
-import path from 'path';
-import cors from 'cors';
-import helmet from 'helmet';
-import compression from 'compression';
-import { fileURLToPath } from 'url';
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
 
-// --- Config & utils ---
-// ملاحظة: تأكد من أن هذه الملفات تستخدم `export` بدلاً من `module.exports`
-import env from './config/env.js';
-import logger from './utils/logger.js';
-import { initializeFirebase } from './config/firebase.js';
+// Config & utils
+const env = require('./config/env');
+const logger = require('./utils/logger');
+const { initializeFirebase } = require('./config/firebase');
 
-// --- Middlewares ---
-import rateLimitMiddleware from './middlewares/rateLimit.js';
-import errorHandler from './middlewares/errorHandler.js';
-import cspOverride from './middlewares/cspOverride.js';
+// Middlewares
+const rateLimitMiddleware = require('./middlewares/rateLimit');
+const errorHandler = require('./middlewares/errorHandler');
+const cspOverride = require('./middlewares/cspOverride');
 
-// --- Routes ---
-import authRoutes from './routes/auth.js';
-import userRoutes from './routes/user.js';
-import adminRoutes from './routes/admin.js';
-import paymentsRoutes from './routes/payments.js';
-
-// --- بديل لـ __dirname في ES Modules ---
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Routes
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/user');
+const adminRoutes = require('./routes/admin');
+const paymentsRoutes = require('./routes/payments');
 
 class Server {
     constructor() {
         this.app = express();
         this.port = process.env.PORT || 8080;
-        this.server = null; // لتعريف متغير السيرفر
     }
 
     setupMiddlewares() {
@@ -58,7 +50,7 @@ class Server {
                 },
             },
             crossOriginEmbedderPolicy: false
-        } ));
+        }));
 
         this.app.use(cors({
             origin: env.NODE_ENV === 'production'
@@ -67,7 +59,7 @@ class Server {
             credentials: true,
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization']
-        } ));
+        }));
 
         this.app.use(compression());
 
@@ -80,7 +72,6 @@ class Server {
 
         this.app.use(rateLimitMiddleware);
 
-        // استخدام المتغير __dirname الجديد
         this.app.use(express.static(path.join(__dirname, '../public'), {
             maxAge: env.NODE_ENV === 'production' ? '1d' : '0',
             etag: true,
@@ -132,7 +123,6 @@ class Server {
         this.app.use('/admin.html', cspOverride);
         this.app.use('/user.html', cspOverride);
 
-        // استخدام المتغير __dirname الجديد
         this.app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
         this.app.get('/register', (req, res) => res.sendFile(path.join(__dirname, '../public/register.html')));
         this.app.get('/user', (req, res) => res.sendFile(path.join(__dirname, '../public/user.html')));
@@ -163,27 +153,24 @@ class Server {
             process.exit(1);
         });
 
-        const shutdown = () => {
-            logger.info('Shutdown signal received, shutting down gracefully');
-            if (this.server) {
-                this.server.close(() => {
-                    logger.info('Server closed.');
-                    process.exit(0);
-                });
-            } else {
-                process.exit(0);
-            }
-        };
+        process.on('SIGTERM', () => {
+            logger.info('SIGTERM received, shutting down gracefully');
+            this.server.close(() => process.exit(0));
+        });
 
-        process.on('SIGTERM', shutdown);
-        process.on('SIGINT', shutdown);
+        process.on('SIGINT', () => {
+            logger.info('SIGINT received, shutting down gracefully');
+            this.server.close(() => process.exit(0));
+        });
     }
 
     async start() {
+        // تجهيز الـ middlewares والـ routes قبل التشغيل
         this.setupMiddlewares();
         this.setupRoutes();
         this.setupErrorHandling();
 
+        // شغّل السيرفر فورًا عشان Cloud Run يعدّي الـ health check
         this.server = this.app.listen(this.port, '0.0.0.0', () => {
             logger.info(`🚀 Server running on port ${this.port}`, {
                 environment: env.NODE_ENV,
@@ -192,6 +179,7 @@ class Server {
             });
         });
 
+        // تهيئة Firebase في الخلفية
         try {
             await initializeFirebase();
             logger.info('✅ Firebase initialized successfully');
@@ -203,13 +191,12 @@ class Server {
     }
 }
 
-// --- تشغيل السيرفر ---
-const server = new Server();
-server.start().catch((error) => {
-    // هذا السطر هو الذي كان يسبب الخطأ الأصلي ويجب أن يعمل الآن
-    logger.error('Server startup failed:', error);
-    process.exit(1);
-});
+if (require.main === module) {
+    const server = new Server();
+    server.start().catch((error) => {
+        logger.error('Server startup failed:', error);
+        process.exit(1);
+    });
+}
 
-// --- تصدير الكلاس (اختياري، مفيد للاختبارات) ---
-export default Server;
+module.exports = Server;
