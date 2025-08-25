@@ -23,4 +23,6 @@ COPY . .
 EXPOSE 8080
 
 # تشغيل السيرفر
-CMD ["node", "src/server.js"]
+#MD ["node", "src/server.js"]
+CMD ["node", "test-server.js"]
+
