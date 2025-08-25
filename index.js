@@ -1,3 +1,4 @@
+// استيراد المكتبات المطلوبة
 const express = require('express');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
@@ -50,7 +51,7 @@ const helpers = {
   }
 };
 
-// دالة لتحديث حالة الطلب في Easy Order
+// دالة لتحديث حالة الطلب في Easy Order (تم دمجها من كودك السابق)
 async function updateOrderStatus(customerPhone, status, notes = '') {
     try {
         const easyOrderUpdateUrl = process.env.EASYORDER_UPDATE_URL;
@@ -187,7 +188,7 @@ async function connectToWhatsApp() {
 }
 
 // Express APIs
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -342,7 +343,94 @@ app.post('/user/login', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>WhatsApp Subscription Bot</title>
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+      <style>
+        body { padding: 20px; background-color: #f8f9fa; }
+        .container { max-width: 800px; }
+        .card { margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="text-center mb-4">
+          <h1>WhatsApp Subscription Bot</h1>
+          <p class="lead">نظام إدارة الاشتراكات والطلبات عبر واتساب</p>
+        </div>
+        
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-body text-center">
+                <h5 class="card-title">لوحة الإدارة</h5>
+                <p class="card-text">للمسؤولين لإدارة المستخدمين والاشتراكات</p>
+                <a href="/admin" class="btn btn-primary">الدخول إلى لوحة الإدارة</a>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-body text-center">
+                <h5 class="card-title">لوحة المستخدم</h5>
+                <p class="card-text">للمستخدمين للتحقق من حالة اشتراكهم</p>
+                <a href="/user" class="btn btn-success">الدخول إلى لوحة المستخدم</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card mt-4">
+          <div class="card-body text-center">
+            <h5 class="card-title">حالة البوت</h5>
+            <div id="botStatus">جاري التحقق...</div>
+            <div id="qrCode" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
+      
+      <script>
+        async function updateBotStatus() {
+          try {
+            const response = await fetch('/api/status');
+            const status = await response.json();
+            
+            const statusElement = document.getElementById('botStatus');
+            statusElement.innerHTML = status.connected 
+              ? '<span class="badge bg-success">متصل</span>' 
+              : '<span class="badge bg-danger">غير متصل</span>';
+            
+            if (!status.connected && status.hasQR) {
+              const qrResponse = await fetch('/api/qr');
+              if (qrResponse.ok) {
+                const qrBlob = await qrResponse.blob();
+                const qrUrl = URL.createObjectURL(qrBlob);
+                
+                document.getElementById('qrCode').innerHTML = \`
+                  <p>امسح QR Code للاتصال:</p>
+                  <img src="\${qrUrl}" width="200" height="200">
+                \`;
+              } else {
+                document.getElementById('qrCode').innerHTML = '<p>QR Code غير متاح حالياً</p>';
+              }
+            } else {
+              document.getElementById('qrCode').innerHTML = '';
+            }
+          } catch (error) {
+            console.error('Error fetching bot status:', error);
+          }
+        }
+        
+        updateBotStatus();
+        setInterval(updateBotStatus, 5000);
+      </script>
+    </body>
+    </html>
+  `);
 });
 
 app.use((req, res) => {
