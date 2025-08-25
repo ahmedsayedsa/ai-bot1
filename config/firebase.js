@@ -1,50 +1,31 @@
-// المكان المحتمل: config/firebase.js
-
+// config/firebase.js
 import { initializeApp, cert } from 'firebase-admin/app';
 import admin from 'firebase-admin';
 
-// دالة لتهيئة Firebase
+// هذا هو المسار الافتراضي الذي سيقوم Cloud Run بوضع السر فيه
+const SERVICE_ACCOUNT_PATH = '/etc/secrets/firebase-key/serviceAccountKey.json';
+
 async function initializeFirebase() {
   try {
-    // تحقق إذا كان التطبيق قد تم تهيئته بالفعل
+    // لا تقم بالتهيئة إذا كان التطبيق مهيأ بالفعل
     if (admin.apps.length) {
-      console.log('Firebase app already initialized.');
       return;
     }
 
-    // بناء كائن الاعتماد من متغيرات البيئة
-    const firebaseCredentials = {
-      type: "service_account",
-      project_id: process.env.FIREBASE_PROJECT_ID,
-      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID, // هذا الحقل ليس لديك، لكنه ليس إلزاميًا دائمًا
-      private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'), // <-- مهم جدًا: استبدال \n
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      client_id: process.env.FIREBASE_CLIENT_ID, // هذا الحقل ليس لديك، لكنه ليس إلزاميًا دائمًا
-      auth_uri: "https://accounts.google.com/o/oauth2/auth",
-      token_uri: "https://oauth2.googleapis.com/token",
-      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-      client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${process.env.FIREBASE_CLIENT_EMAIL}`
-    };
-
-    // تحقق من وجود المتغيرات الأساسية
-    if (!firebaseCredentials.project_id || !firebaseCredentials.client_email || !firebaseCredentials.private_key ) {
-      console.warn('⚠️ Firebase credentials are missing or incomplete from environment variables. Skipping Firebase initialization.');
-      return; // لا توقف التطبيق، فقط تخطى التهيئة
-    }
-
-    // تهيئة تطبيق Firebase باستخدام الاعتمادات المجمعة
+    // تهيئة التطبيق مباشرة من ملف JSON الذي يوفره Secret Manager
     initializeApp({
-      credential: cert(firebaseCredentials)
+      credential: cert(SERVICE_ACCOUNT_PATH)
     });
 
-    console.log('✅ Firebase initialized successfully from environment variables.');
+    console.log('✅ Firebase initialized successfully from Secret Manager.');
 
   } catch (error) {
-    console.error('❌ Firebase initialization failed:', error);
-    // في بيئة الإنتاج، قد ترغب في إيقاف التطبيق إذا كان Firebase ضروريًا
-    // process.exit(1); 
+    console.error(`❌ Firebase initialization failed. Could not find or parse the service account file at ${SERVICE_ACCOUNT_PATH}.`, error);
+    // في بيئة الإنتاج، من الأفضل إيقاف التطبيق إذا كانت تهيئة Firebase إلزامية
+    if (process.env.NODE_ENV === 'production') {
+        process.exit(1);
+    }
   }
 }
 
-// تصدير الدالة لاستخدامها في server.js
 export { initializeFirebase };
