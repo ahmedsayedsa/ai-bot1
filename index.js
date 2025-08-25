@@ -147,9 +147,9 @@ app.post("/webhook/:phone", async (req, res) => {
 });
 
 
-// -----------------
-// 🚀 Start Server
-// -----------------
+// ✅ لازم نخلي السيرفر يسمع على البورت اللي Cloud Run بيبعته
+const PORT = process.env.PORT || 8080;
+
 app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
 });
