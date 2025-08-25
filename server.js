@@ -29,10 +29,9 @@ class Server {
     constructor() {
         this.app = express();
         // نقرأ البورت من متغير البيئة أو نستخدم 8080 محليًا
-        this.port = process.env.PORT || env.PORT || 8080;
-        this.setupMiddlewares();
-        this.setupRoutes();
-        this.setupErrorHandling();
+        const port = process.env.PORT || 8080;
+        app.listen(port, '0.0.0.0', () => {
+      console.log(`Server running on port ${port}`);
     }
 
     setupMiddlewares() {
