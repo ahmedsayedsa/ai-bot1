@@ -13,11 +13,6 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Middleware
-app.use(bodyParser.json());
-app.use(express.static('public'));
-app.use(express.urlencoded({ extended: true }));
-
 // تهيئة Firestore
 const firestore = new Firestore();
 
@@ -42,17 +37,12 @@ const userModel = {
 
 // وظائف المساعدة
 const helpers = {
-  // التحقق من صلاحية الاشتراك
   isSubscriptionActive: (expiryDate) => {
-    return expiryDate && new Date(expiryDate) > new Date();
+    return expiryDate && new Date(expiryDate.toDate ? expiryDate.toDate() : expiryDate) > new Date();
   },
-  
-  // تنسيق التاريخ
   formatDate: (date) => {
     return moment(date).format('YYYY-MM-DD HH:mm:ss');
   },
-  
-  // إضافة أيام لتاريخ
   addDays: (date, days) => {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
@@ -60,9 +50,54 @@ const helpers = {
   }
 };
 
+// دالة لتحديث حالة الطلب في Easy Order
+async function updateOrderStatus(customerPhone, status, notes = '') {
+    try {
+        const easyOrderUpdateUrl = process.env.EASYORDER_UPDATE_URL;
+        const easyOrderApiKey = process.env.EASYORDER_API_KEY;
+
+        if (!easyOrderUpdateUrl || !easyOrderApiKey) {
+            console.error('❌ متغيرات البيئة EASYORDER_UPDATE_URL أو EASYORDER_API_KEY غير محددة.');
+            return { success: false, error: 'API URL or Key is missing' };
+        }
+
+        const updateData = {
+            customer_phone: customerPhone,
+            status: status,
+            notes: notes,
+            updated_by: 'whatsapp_bot',
+            timestamp: new Date().toISOString()
+        };
+
+        console.log(`🔄 محاولة تحديث حالة الطلب في Easy Order:`, updateData);
+
+        const response = await fetch(easyOrderUpdateUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${easyOrderApiKey}`,
+            },
+            body: JSON.stringify(updateData),
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log(`✅ تم تحديث حالة الطلب في Easy Order بنجاح:`, result);
+            return { success: true, data: result };
+        } else {
+            const errorText = await response.text();
+            console.error(`❌ فشل في تحديث Easy Order: HTTP ${response.status} - ${errorText}`);
+            return { success: false, error: `HTTP ${response.status} - ${errorText}` };
+        }
+    } catch (error) {
+        console.error('❌ خطأ في تحديث حالة الطلب:', error);
+        return { success: false, error: error.message };
+    }
+}
+
 // إدارة جلسة الواتساب
 async function connectToWhatsApp() {
-  const { state, saveCreds } = await useMultiFileAuthState(process.env.SESSION_PATH || './auth_info');
+  const { state, saveCreds } = await useMultiFileAuthState(process.env.SESSION_PATH || './auth_info_session');
   
   sock = makeWASocket({
     version: (await fetchLatestBaileysVersion()).version,
@@ -84,7 +119,7 @@ async function connectToWhatsApp() {
     }
     
     if (connection === 'close') {
-      isConnected = false; // إعادة تعيين حالة الاتصال
+      isConnected = false;
       const shouldReconnect = (lastDisconnect.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
       
       if (shouldReconnect) {
@@ -103,12 +138,9 @@ async function connectToWhatsApp() {
 
   // معالجة الرسائل الواردة
   sock.ev.on('messages.upsert', async (m) => {
-    // التحقق من وجود الرسائل
     if (!m.messages || m.messages.length === 0) return;
-    
     const message = m.messages[0];
     
-    // تجاهل الرسائل الجماعية والرسائل من البوت نفسه
     if (message.key.remoteJid === 'status@broadcast' || !message.message || message.key.fromMe) {
       return;
     }
@@ -116,11 +148,9 @@ async function connectToWhatsApp() {
     const userPhone = message.key.remoteJid.replace('@s.whatsapp.net', '');
     
     try {
-      // البحث عن المستخدم في قاعدة البيانات
       const userDoc = await firestore.collection('users').doc(userPhone).get();
       
       if (!userDoc.exists) {
-        // إذا لم يكن المستخدم مسجلاً، نطلب منه التسجيل
         await sock.sendMessage(message.key.remoteJid, { 
           text: 'مرحباً! أنت غير مسجل في نظامنا. يرجى التواصل مع المسؤول للتسجيل.' 
         });
@@ -129,44 +159,26 @@ async function connectToWhatsApp() {
       
       const userData = userDoc.data();
       
-      // التحقق من حالة الاشتراك
       if (!helpers.isSubscriptionActive(userData.subscription.expiryDate)) {
         await sock.sendMessage(message.key.remoteJid, { 
           text: 'عذراً، اشتراكك منتهي. يرجى تجديد الاشتراك للمتابعة.' 
         });
-        
-        // تحديث حالة الاشتراك
         await firestore.collection('users').doc(userPhone).update({
           'subscription.active': false
         });
-        
         return;
       }
       
-      // إرسال رسالة الترحيب باستخدام القالب
       const welcomeMessage = userData.messageTemplate
         .replace('{name}', userData.name)
         .replace('{phone}', userPhone);
       
       await sock.sendMessage(message.key.remoteJid, { text: welcomeMessage });
       
-      // زيادة عداد الرسائل
       await firestore.collection('users').doc(userPhone).update({
         messageCount: Firestore.FieldValue.increment(1),
         lastMessage: new Date()
       });
-      
-      // زيادة العداد العام للرسائل
-      const statsDoc = await firestore.collection('stats').doc('messages').get();
-      if (statsDoc.exists) {
-        await firestore.collection('stats').doc('messages').update({
-          total: Firestore.FieldValue.increment(1)
-        });
-      } else {
-        await firestore.collection('stats').doc('messages').set({
-          total: 1
-        });
-      }
       
     } catch (error) {
       console.error('Error processing message:', error);
@@ -174,20 +186,19 @@ async function connectToWhatsApp() {
   });
 }
 
+// Express APIs
+app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
+
 // APIs
-// الحصول على جميع المستخدمين
 app.get('/api/users', async (req, res) => {
   try {
     const usersSnapshot = await firestore.collection('users').get();
     const users = [];
-    
     usersSnapshot.forEach(doc => {
-      users.push({
-        id: doc.id,
-        ...doc.data()
-      });
+      users.push({ id: doc.id, ...doc.data() });
     });
-    
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -195,17 +206,13 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-// إضافة/تحديث مستخدم
 app.post('/api/users', async (req, res) => {
   try {
     const { name, phone, subscriptionDays } = req.body;
-    
     if (!name || !phone) {
       return res.status(400).json({ error: 'Name and phone are required' });
     }
-    
     const expiryDate = helpers.addDays(new Date(), parseInt(subscriptionDays) || 30);
-    
     const userData = {
       name,
       phone,
@@ -219,9 +226,7 @@ app.post('/api/users', async (req, res) => {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    
     await firestore.collection('users').doc(phone).set(userData, { merge: true });
-    
     res.json({ success: true, message: 'User added/updated successfully' });
   } catch (error) {
     console.error('Error adding/updating user:', error);
@@ -229,20 +234,16 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-// تحديث قالب الرسالة
 app.post('/api/template', async (req, res) => {
   try {
     const { phone, template } = req.body;
-    
     if (!phone || !template) {
       return res.status(400).json({ error: 'Phone and template are required' });
     }
-    
     await firestore.collection('users').doc(phone).update({
       messageTemplate: template,
       updatedAt: new Date()
     });
-    
     res.json({ success: true, message: 'Template updated successfully' });
   } catch (error) {
     console.error('Error updating template:', error);
@@ -250,7 +251,6 @@ app.post('/api/template', async (req, res) => {
   }
 });
 
-// حالة البوت
 app.get('/api/status', (req, res) => {
   res.json({
     connected: isConnected,
@@ -259,12 +259,10 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// الحصول على QR Code
 app.get('/api/qr', (req, res) => {
   if (!qrCode) {
     return res.status(404).json({ error: 'QR code not available' });
   }
-  
   try {
     const qrBuffer = qrImage.imageSync(qrCode, { type: 'png' });
     res.writeHead(200, {
@@ -277,51 +275,29 @@ app.get('/api/qr', (req, res) => {
   }
 });
 
-// Webhook لاستقبال الطلبات من Easy Order
 app.post('/api/webhook/easyorder', async (req, res) => {
   try {
     const { customerPhone, orderDetails } = req.body;
-    
     if (!customerPhone || !orderDetails) {
       return res.status(400).json({ error: 'Customer phone and order details are required' });
     }
-    
-    // البحث عن المستخدم
     const userDoc = await firestore.collection('users').doc(customerPhone).get();
-    
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
     const userData = userDoc.data();
-    
-    // التحقق من حالة الاشتراك
     if (!helpers.isSubscriptionActive(userData.subscription.expiryDate)) {
       return res.status(403).json({ error: 'User subscription has expired' });
     }
-    
-    // إرسال رسالة الواتساب
     const message = userData.messageTemplate
       .replace('{name}', userData.name)
       .replace('{order}', JSON.stringify(orderDetails));
-    
     if (sock && isConnected) {
       await sock.sendMessage(`${customerPhone}@s.whatsapp.net`, { text: message });
-      
-      // تحديث عداد الرسائل
       await firestore.collection('users').doc(customerPhone).update({
         messageCount: Firestore.FieldValue.increment(1),
         lastMessage: new Date()
       });
-      
-      // زيادة العداد العام للرسائل
-      const statsDoc = await firestore.collection('stats').doc('messages').get();
-      if (statsDoc.exists) {
-        await firestore.collection('stats').doc('messages').update({
-          total: Firestore.FieldValue.increment(1)
-        });
-      }
-      
       res.json({ success: true, message: 'Order notification sent successfully' });
     } else {
       res.status(500).json({ error: 'WhatsApp bot is not connected' });
@@ -339,7 +315,6 @@ app.get('/admin', (req, res) => {
 
 app.post('/admin/login', (req, res) => {
   const { username, password } = req.body;
-  
   if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
     res.json({ success: true });
   } else {
@@ -353,10 +328,8 @@ app.get('/user', (req, res) => {
 
 app.post('/user/login', async (req, res) => {
   const { phone } = req.body;
-  
   try {
     const userDoc = await firestore.collection('users').doc(phone).get();
-    
     if (userDoc.exists) {
       res.json({ success: true, user: userDoc.data() });
     } else {
@@ -368,101 +341,10 @@ app.post('/user/login', async (req, res) => {
   }
 });
 
-// الصفحة الرئيسية
 app.get('/', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>WhatsApp Subscription Bot</title>
-      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-      <style>
-        body { padding: 20px; background-color: #f8f9fa; }
-        .container { max-width: 800px; }
-        .card { margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="text-center mb-4">
-          <h1>WhatsApp Subscription Bot</h1>
-          <p class="lead">نظام إدارة الاشتراكات والطلبات عبر واتساب</p>
-        </div>
-        
-        <div class="row">
-          <div class="col-md-6">
-            <div class="card">
-              <div class="card-body text-center">
-                <h5 class="card-title">لوحة الإدارة</h5>
-                <p class="card-text">للمسؤولين لإدارة المستخدمين والاشتراكات</p>
-                <a href="/admin" class="btn btn-primary">الدخول إلى لوحة الإدارة</a>
-              </div>
-            </div>
-          </div>
-          
-          <div class="col-md-6">
-            <div class="card">
-              <div class="card-body text-center">
-                <h5 class="card-title">لوحة المستخدم</h5>
-                <p class="card-text">للمستخدمين للتحقق من حالة اشتراكهم</p>
-                <a href="/user" class="btn btn-success">الدخول إلى لوحة المستخدم</a>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card mt-4">
-          <div class="card-body text-center">
-            <h5 class="card-title">حالة البوت</h5>
-            <div id="botStatus">جاري التحقق...</div>
-            <div id="qrCode" class="mt-3"></div>
-          </div>
-        </div>
-      </div>
-      
-      <script>
-        // تحديث حالة البوت
-        async function updateBotStatus() {
-          try {
-            const response = await fetch('/api/status');
-            const status = await response.json();
-            
-            const statusElement = document.getElementById('botStatus');
-            statusElement.innerHTML = status.connected 
-              ? '<span class="badge bg-success">متصل</span>' 
-              : '<span class="badge bg-danger">غير متصل</span>';
-            
-            if (!status.connected && status.hasQR) {
-              const qrResponse = await fetch('/api/qr');
-              if (qrResponse.ok) {
-                const qrBlob = await qrResponse.blob();
-                const qrUrl = URL.createObjectURL(qrBlob);
-                
-                document.getElementById('qrCode').innerHTML = \`
-                  <p>امسح QR Code للاتصال:</p>
-                  <img src="\${qrUrl}" width="200" height="200">
-                \`;
-              } else {
-                document.getElementById('qrCode').innerHTML = '<p>QR Code غير متاح حالياً</p>';
-              }
-            } else {
-              document.getElementById('qrCode').innerHTML = '';
-            }
-          } catch (error) {
-            console.error('Error fetching bot status:', error);
-          }
-        }
-        
-        // تحديث الحالة كل 5 ثوان
-        updateBotStatus();
-        setInterval(updateBotStatus, 5000);
-      </script>
-    </body>
-    </html>
-  `);
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// معالجة الأخطاء 404
 app.use((req, res) => {
   res.status(404).send(`
     <!DOCTYPE html>
@@ -482,8 +364,7 @@ app.use((req, res) => {
   `);
 });
 
-// بدء الخادم
 app.listen(PORT, () => {
-  console.log(\`Server running on port \${PORT}\`);
+  console.log(`Server running on port ${PORT}`);
   connectToWhatsApp();
 });
