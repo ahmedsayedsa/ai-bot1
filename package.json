@@ -2,7 +2,6 @@
   "name": "whatsapp-subscription-bot",
   "version": "1.0.0",
   "description": "نظام إدارة اشتراكات واتساب مع لوحة تحكم متكاملة",
-  "type": "module",
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
@@ -30,4 +29,5 @@
   "engines": {
     "node": ">=20"
   }
+  
 }
