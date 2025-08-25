@@ -1,97 +1,508 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>لوحة تحكم الأدمن</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-  <style>
-    body { background-color: #f8f9fa; }
-    .container { max-width: 500px; margin-top: 50px; }
-    #qr-container { text-align: center; margin-top: 20px; }
-    #qr-container img { max-width: 100%; height: auto; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - WhatsApp Bot</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-shadow { box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: none; border-radius: 15px; width: 80%; max-width: 500px; }
+        .toast { position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 8px; color: white; z-index: 1001; transform: translateX(400px); transition: transform 0.3s ease; }
+        .toast.show { transform: translateX(0); }
+        .toast.success { background-color: #10B981; }
+        .toast.error { background-color: #EF4444; }
+    </style>
 </head>
-<body>
-
-<div class="container">
-  <h2 class="text-center mb-4">تسجيل دخول الأدمن</h2>
-  <form id="loginForm">
-    <div class="mb-3">
-      <label for="username" class="form-label">اسم المستخدم</label>
-      <input type="text" class="form-control" id="username" required>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal" style="display: flex;">
+        <div class="modal-content">
+            <div class="text-center mb-6">
+                <i class="fas fa-lock text-4xl text-blue-500 mb-4"></i>
+                <h2 class="text-2xl font-bold text-gray-800">تسجيل دخول الإدارة</h2>
+                <p class="text-gray-600">يرجى إدخال بيانات الإدارة للدخول</p>
+            </div>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">اسم المستخدم</label>
+                    <input type="text" id="username" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">كلمة المرور</label>
+                    <input type="password" id="password" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                    <i class="fas fa-sign-in-alt ml-2"></i>دخول
+                </button>
+            </form>
+        </div>
     </div>
-    <div class="mb-3">
-      <label for="password" class="form-label">كلمة المرور</label>
-      <input type="password" class="form-control" id="password" required>
+
+    <!-- Main Content -->
+    <div id="mainContent" style="display: none;">
+        <!-- Header -->
+        <nav class="bg-white shadow-lg">
+            <div class="container mx-auto px-4 py-3">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-4 rtl:space-x-reverse">
+                        <i class="fas fa-cog text-blue-500 text-3xl"></i>
+                        <h1 class="text-2xl font-bold text-gray-800">لوحة الإدارة</h1>
+                    </div>
+                    <div class="flex space-x-2 rtl:space-x-reverse">
+                        <a href="/" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition duration-200">
+                            <i class="fas fa-home ml-2"></i>الرئيسية
+                        </a>
+                        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-200">
+                            <i class="fas fa-sign-out-alt ml-2"></i>خروج
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mx-auto px-4 py-8">
+            <!-- Quick Stats -->
+            <div id="statsRow" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <!-- Stats will be loaded here -->
+            </div>
+
+            <!-- Add User Section -->
+            <div class="bg-white rounded-xl card-shadow p-6 mb-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-user-plus text-blue-500 ml-2"></i>إضافة/تحديث مستخدم
+                </h2>
+                
+                <form id="userForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">رقم الهاتف</label>
+                        <input type="text" id="phoneNumber" placeholder="966501234567" 
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">الاسم</label>
+                        <input type="text" id="userName" placeholder="أحمد محمد" 
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500" required>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">حالة الاشتراك</label>
+                        <select id="userStatus" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                            <option value="active">نشط</option>
+                            <option value="inactive">غير نشط</option>
+                            <option value="suspended">معلق</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">مدة الاشتراك (بالأيام)</label>
+                        <input type="number" id="subscriptionDays" value="30" min="1" max="365"
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">رسالة الترحيب</label>
+                        <textarea id="welcomeMessage" rows="3" placeholder="مرحباً بك! 👋"
+                                  class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"></textarea>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition duration-200">
+                            <i class="fas fa-save ml-2"></i>حفظ المستخدم
+                        </button>
+                        <button type="button" onclick="clearForm()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition duration-200 mr-2">
+                            <i class="fas fa-eraser ml-2"></i>مسح
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Users Table -->
+            <div class="bg-white rounded-xl card-shadow p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">
+                        <i class="fas fa-users text-green-500 ml-2"></i>قائمة المستخدمين
+                    </h2>
+                    <button onclick="loadUsers()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition duration-200">
+                        <i class="fas fa-sync-alt ml-1"></i>تحديث
+                    </button>
+                </div>
+
+                <!-- Search Box -->
+                <div class="mb-4">
+                    <input type="text" id="searchInput" placeholder="البحث برقم الهاتف أو الاسم..." 
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                           oninput="filterUsers()">
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-4 py-2 text-right">رقم الهاتف</th>
+                                <th class="px-4 py-2 text-right">الاسم</th>
+                                <th class="px-4 py-2 text-right">الحالة</th>
+                                <th class="px-4 py-2 text-right">تاريخ الانتهاء</th>
+                                <th class="px-4 py-2 text-right">الرسائل</th>
+                                <th class="px-4 py-2 text-right">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                    <div>جاري تحميل البيانات...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
-    <button type="submit" class="btn btn-primary w-100" id="loginBtn">دخول</button>
-  </form>
 
-  <div id="qr-container" class="mt-4" style="display:none;">
-    <h5>رمز الـ QR</h5>
-    <img id="qr-image" alt="QR Code">
-  </div>
-</div>
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">تعديل المستخدم</h3>
+                <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editForm">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">رسالة الترحيب</label>
+                    <textarea id="editWelcomeMessage" rows="4" 
+                              class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">إضافة أيام للاشتراك</label>
+                    <input type="number" id="additionalDays" value="30" min="1" max="365"
+                           class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" onclick="closeEditModal()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-200 ml-2">
+                        إلغاء
+                    </button>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-200">
+                        حفظ التعديل
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<script>
-(function() {
-  const loginForm = document.getElementById('loginForm');
-  const qrContainer = document.getElementById('qr-container');
-  const qrImage = document.getElementById('qr-image');
+    <script>
+        let allUsers = [];
+        let currentEditUser = null;
 
-  // تسجيل الدخول
-  loginForm.addEventListener('submit', async function (e) {
-    e.preventDefault(); // منع إعادة تحميل الصفحة
+        // Default admin credentials (يفضل تغييرها في الإنتاج)
+        const ADMIN_USERNAME = 'admin';
+        const ADMIN_PASSWORD = 'admin123';
 
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
+        // التحقق من تسجيل الدخول
+        function checkAuth() {
+            const isLoggedIn = localStorage.getItem('adminLoggedIn');
+            if (isLoggedIn === 'true') {
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                loadData();
+            }
+        }
 
-    try {
-      const res = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user: username, pass: password }),
-        credentials: 'include'
-      });
+        // تسجيل الدخول
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
 
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        data = {};
-      }
+            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+                localStorage.setItem('adminLoggedIn', 'true');
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                showToast('تم تسجيل الدخول بنجاح!', 'success');
+                loadData();
+            } else {
+                showToast('بيانات الدخول غير صحيحة!', 'error');
+            }
+        });
 
-      console.log('Login Response:', data);
+        // تسجيل الخروج
+        function logout() {
+            localStorage.removeItem('adminLoggedIn');
+            location.reload();
+        }
 
-      if (res.ok) {
-        alert('تم تسجيل الدخول بنجاح');
-        loadQRCode();
-      } else {
-        alert(data.message || 'خطأ في تسجيل الدخول');
-      }
-    } catch (err) {
-      console.error('Error during login:', err);
-      alert('حصل خطأ في الاتصال بالسيرفر');
-    }
-  });
+        // تحميل البيانات
+        async function loadData() {
+            await Promise.all([loadStats(), loadUsers()]);
+        }
 
-  // تحميل الـ QR Code
-  async function loadQRCode() {
-    try {
-      const res = await fetch('/api/admin/qr', { credentials: 'include' });
-      if (!res.ok) throw new Error('فشل تحميل QR Code');
-      const blob = await res.blob();
-      const imgUrl = URL.createObjectURL(blob);
-      qrImage.src = imgUrl;
-      qrContainer.style.display = 'block';
-    } catch (err) {
-      console.error('Error loading QR Code:', err);
-      alert('تعذر تحميل رمز الـ QR');
-    }
-  }
-})();
-</script>
+        // تحميل الإحصائيات
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                
+                document.getElementById('statsRow').innerHTML = `
+                    <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-2xl font-bold">${stats.totalUsers || 0}</div>
+                                <div class="text-blue-100">إجمالي المستخدمين</div>
+                            </div>
+                            <i class="fas fa-users text-3xl text-blue-200"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-2xl font-bold">${stats.activeUsers || 0}</div>
+                                <div class="text-green-100">المستخدمين النشطين</div>
+                            </div>
+                            <i class="fas fa-user-check text-3xl text-green-200"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-2xl font-bold">${stats.totalMessages || 0}</div>
+                                <div class="text-purple-100">الرسائل المُرسلة</div>
+                            </div>
+                            <i class="fas fa-envelope text-3xl text-purple-200"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-2xl font-bold">${stats.totalOrders || 0}</div>
+                                <div class="text-orange-100">إجمالي الطلبات</div>
+                            </div>
+                            <i class="fas fa-shopping-cart text-3xl text-orange-200"></i>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
 
+        // تحميل المستخدمين
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                const data = await response.json();
+                allUsers = data.users;
+                displayUsers(allUsers);
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersTableBody').innerHTML = 
+                    '<tr><td colspan="6" class="text-center py-4 text-red-500">حدث خطأ في تحميل البيانات</td></tr>';
+            }
+        }
+
+        // عرض المستخدمين في الجدول
+        function displayUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">لا توجد بيانات</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => {
+                const endDate = new Date(user.endDate);
+                const isExpired = endDate < new Date();
+                const statusClass = user.status === 'active' && !isExpired ? 'text-green-600' : 'text-red-600';
+                const statusText = user.status === 'active' && !isExpired ? 'نشط' : 'منتهي';
+                
+                return `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-3">${user.phoneNumber}</td>
+                        <td class="px-4 py-3">${user.name}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${statusClass}">
+                                ${statusText}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">${endDate.toLocaleDateString('ar')}</td>
+                        <td class="px-4 py-3">${user.messageCount || 0}</td>
+                        <td class="px-4 py-3">
+                            <button onclick="editUser('${user.phoneNumber}')" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs transition duration-200 ml-1">
+                                <i class="fas fa-edit"></i> تعديل
+                            </button>
+                            <button onclick="deleteUser('${user.phoneNumber}')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition duration-200">
+                                <i class="fas fa-trash"></i> حذف
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // البحث في المستخدمين
+        function filterUsers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filteredUsers = allUsers.filter(user => 
+                user.phoneNumber.toLowerCase().includes(searchTerm) ||
+                user.name.toLowerCase().includes(searchTerm)
+            );
+            displayUsers(filteredUsers);
+        }
+
+        // إضافة/تحديث مستخدم
+        document.getElementById('userForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                phoneNumber: document.getElementById('phoneNumber').value,
+                name: document.getElementById('userName').value,
+                status: document.getElementById('userStatus').value,
+                daysToAdd: parseInt(document.getElementById('subscriptionDays').value),
+                welcomeMessage: document.getElementById('welcomeMessage').value || 'مرحباً بك! 👋'
+            };
+
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('تم حفظ المستخدم بنجاح!', 'success');
+                    clearForm();
+                    loadUsers();
+                    loadStats();
+                } else {
+                    showToast('حدث خطأ: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error saving user:', error);
+                showToast('حدث خطأ في الحفظ!', 'error');
+            }
+        });
+
+        // مسح النموذج
+        function clearForm() {
+            document.getElementById('userForm').reset();
+            document.getElementById('subscriptionDays').value = '30';
+            document.getElementById('welcomeMessage').value = '';
+        }
+
+        // تعديل المستخدم
+        function editUser(phoneNumber) {
+            const user = allUsers.find(u => u.phoneNumber === phoneNumber);
+            if (user) {
+                currentEditUser = phoneNumber;
+                document.getElementById('editWelcomeMessage').value = user.welcomeMessage || '';
+                document.getElementById('editModal').style.display = 'block';
+            }
+        }
+
+        // إغلاق نافذة التعديل
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentEditUser = null;
+        }
+
+        // حفظ التعديل
+        document.getElementById('editForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!currentEditUser) return;
+
+            const welcomeMessage = document.getElementById('editWelcomeMessage').value;
+            const additionalDays = parseInt(document.getElementById('additionalDays').value);
+
+            try {
+                // تحديث رسالة الترحيب
+                await fetch('/api/template', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phoneNumber: currentEditUser,
+                        welcomeMessage: welcomeMessage
+                    })
+                });
+
+                // إضافة أيام للاشتراك
+                const user = allUsers.find(u => u.phoneNumber === currentEditUser);
+                await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phoneNumber: currentEditUser,
+                        name: user.name,
+                        status: user.status,
+                        daysToAdd: additionalDays,
+                        welcomeMessage: welcomeMessage
+                    })
+                });
+
+                showToast('تم تحديث المستخدم بنجاح!', 'success');
+                closeEditModal();
+                loadUsers();
+            } catch (error) {
+                console.error('Error updating user:', error);
+                showToast('حدث خطأ في التحديث!', 'error');
+            }
+        });
+
+        // حذف المستخدم
+        async function deleteUser(phoneNumber) {
+            if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/users/${phoneNumber}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('تم حذف المستخدم بنجاح!', 'success');
+                    loadUsers();
+                    loadStats();
+                } else {
+                    showToast('حدث خطأ في الحذف!', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showToast('حدث خطأ في الحذف!', 'error');
+            }
+        }
+
+        // عرض رسالة التنبيه
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        // بدء التطبيق
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
 </body>
 </html>
