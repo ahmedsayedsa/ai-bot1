@@ -28,7 +28,8 @@ const paymentsRoutes = require('./routes/payments');
 class Server {
     constructor() {
         this.app = express();
-        this.port = env.PORT || 8080;
+        // نقرأ البورت من متغير البيئة أو نستخدم 8080 محليًا
+        this.port = process.env.PORT || env.PORT || 8080;
         this.setupMiddlewares();
         this.setupRoutes();
         this.setupErrorHandling();
