@@ -1,11 +1,7 @@
-# 1. ابدأ من صورة Node.js الرسمية
 FROM node:20-alpine
-
-# 2. أنشئ مجلد العمل
 WORKDIR /app
-
-# 3. انسخ كل ملفات المشروع (بما في ذلك test-server.js)
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
 COPY . .
-
-# 4. عرّف الأمر الذي سيتم تشغيله (ملف الاختبار البسيط)
-CMD ["node", "test-server.js"]
+EXPOSE 8080
+CMD ["npm", "start"]
