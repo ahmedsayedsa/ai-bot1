@@ -2,6 +2,8 @@
  * Main Server File
  * WhatsApp Subscription Bot
  */
+this.app.use(express.json());
+this.app.use(express.urlencoded({ extended: true }));
 
 const express = require('express');
 const path = require('path');
@@ -125,8 +127,22 @@ class Server {
             res.sendFile(path.join(__dirname, '../public/index.html'));
         });
 
-        this.app.get('/login', (req, res) => {
-            res.sendFile(path.join(__dirname, '../public/login.html'));
+        this.app.post('/api/login', (req, res) => {
+         const { email, password } = req.body;
+
+         // مثال بسيط للتحقق (استبدله بالتحقق الفعلي من قاعدة البيانات)
+         if (email === 'test@example.com' && password === '123456') {
+        res.json({
+            success: true,
+            message: 'Login successful',
+            token: 'JWT_TOKEN_HERE'
+        });
+        } else {
+        res.status(401).json({
+            success: false,
+            message: 'Invalid email or password'
+        });
+         }
         });
 
         this.app.get('/register', (req, res) => {
