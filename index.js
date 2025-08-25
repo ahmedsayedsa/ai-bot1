@@ -2,7 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const path = require("path");
 const { Firestore } = require("@google-cloud/firestore");
-const QRCode = require("qrcode");
+//const QRCode = require("qrcode");
 
 // إعداد السيرفر
 const app = express();
