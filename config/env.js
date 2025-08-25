@@ -5,43 +5,49 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// تحميل ملف .env
+// تحميل ملف .env من جذر المشروع
 dotenv.config({ path: join(__dirname, '../../.env') });
 
 export const config = {
-  port: process.env.PORT || 8080,
+  // إعدادات الخادم
+  port: process.env.PORT || 8080, // Cloud Run يرسل PORT تلقائيًا
   nodeEnv: process.env.NODE_ENV || 'development',
 
+  // إعدادات Firebase
   firebase: {
     projectId: process.env.FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
   },
 
+  // إعدادات JWT
   jwt: {
     secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
     refreshSecret: process.env.REFRESH_TOKEN_SECRET,
   },
 
+  // إعدادات الدفع
   payment: {
     provider: process.env.PAYMENT_PROVIDER || 'stripe',
     secret: process.env.PAYMENT_PROVIDER_SECRET,
     webhookSecret: process.env.PAYMENT_WEBHOOK_SECRET,
   },
 
+  // إعدادات التطبيق
   app: {
     baseUrl: process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 8080}`,
     name: process.env.APP_NAME || 'نظام إدارة اشتراكات واتساب',
   },
 
+  // إعدادات معدل الطلبات
   rateLimit: {
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000,
+    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 100,
   },
 };
 
-// قائمة المتغيرات المطلوبة
+// قائمة المتغيرات المطلوبة لتشغيل التطبيق
 const requiredVars = [
   'FIREBASE_PROJECT_ID',
   'FIREBASE_CLIENT_EMAIL',
@@ -51,12 +57,7 @@ const requiredVars = [
 
 // دالة لفحص المتغيرات بعد بدء السيرفر
 export function checkRequiredEnvVars() {
-  let missing = [];
-  for (const varName of requiredVars) {
-    if (!process.env[varName]) {
-      missing.push(varName);
-    }
-  }
+  const missing = requiredVars.filter(varName => !process.env[varName]);
 
   if (missing.length > 0) {
     console.warn(`⚠️ تحذير: المتغيرات التالية غير موجودة في بيئة التشغيل: ${missing.join(', ')}`);
