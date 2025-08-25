@@ -134,4 +134,5 @@ app.post("/api/users", async (req, res) => {
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  startWhatsApp(); // <-- شغل الواتساب بعد ما السيرفر يفتح
 });
