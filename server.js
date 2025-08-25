@@ -12,7 +12,7 @@ const compression = require('compression');
 // Config & utils
 const env = require('./config/env');
 const logger = require('./utils/logger');
-const { initializeFirebase } = require('./config/firebase');
+// st { initializeFirebase } = require('./config/firebase');
 
 // Middlewares
 const rateLimitMiddleware = require('./middlewares/rateLimit');
@@ -180,12 +180,12 @@ class Server {
         });
 
         // تهيئة Firebase في الخلفية
-        try {
-            await initializeFirebase();
-            logger.info('✅ Firebase initialized successfully');
-        } catch (error) {
-            logger.error('❌ Firebase initialization failed:', error);
-        }
+        //y {
+       ///  await initializeFirebase();
+       ///  logger.info('✅ Firebase initialized successfully');
+       // catch (error) {
+       //   logger.error('❌ Firebase initialization failed:', error);
+      //}
 
         return this.server;
     }
