@@ -381,8 +381,6 @@ class AdminDashboard {
 
     async rejectPayment(paymentId) {
         try {
-            const response =async rejectPayment(paymentId) {
-        try {
             const response = await this.makeAuthenticatedRequest(`/api/admin/payments/${paymentId}/reject`, {
                 method: 'POST'
             });
