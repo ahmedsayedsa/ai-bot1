@@ -62,7 +62,7 @@ const helpers = {
 
 // إدارة جلسة الواتساب
 async function connectToWhatsApp() {
-  const { state, saveCreds } = await useMultiFileAuthState(process.env.SESSION_PATH);
+  const { state, saveCreds } = await useMultiFileAuthState(process.env.SESSION_PATH || './auth_info');
   
   sock = makeWASocket({
     version: (await fetchLatestBaileysVersion()).version,
@@ -84,6 +84,7 @@ async function connectToWhatsApp() {
     }
     
     if (connection === 'close') {
+      isConnected = false; // إعادة تعيين حالة الاتصال
       const shouldReconnect = (lastDisconnect.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
       
       if (shouldReconnect) {
@@ -102,6 +103,9 @@ async function connectToWhatsApp() {
 
   // معالجة الرسائل الواردة
   sock.ev.on('messages.upsert', async (m) => {
+    // التحقق من وجود الرسائل
+    if (!m.messages || m.messages.length === 0) return;
+    
     const message = m.messages[0];
     
     // تجاهل الرسائل الجماعية والرسائل من البوت نفسه
@@ -371,7 +375,7 @@ app.get('/', (req, res) => {
     <html>
     <head>
       <title>WhatsApp Subscription Bot</title>
-      <link href="/css/bootstrap.min.css" rel="stylesheet">
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
       <style>
         body { padding: 20px; background-color: #f8f9fa; }
         .container { max-width: 800px; }
@@ -430,19 +434,17 @@ app.get('/', (req, res) => {
             
             if (!status.connected && status.hasQR) {
               const qrResponse = await fetch('/api/qr');
-              const qrBlob = await qrResponse.blob();
-              const qrUrl = URL.createObjectURL(qrBlob);
-              
-              document.getElementById('qrCode').innerHTML = `
-               res.send(`
-                 <html>
-                <body>
-                <p>امسح QR Code للاتصال:</p>
-                </body>
-                </html>
-                    <img src="${qrUrl}" width="200" height="200">`);
-
-              `;
+              if (qrResponse.ok) {
+                const qrBlob = await qrResponse.blob();
+                const qrUrl = URL.createObjectURL(qrBlob);
+                
+                document.getElementById('qrCode').innerHTML = \`
+                  <p>امسح QR Code للاتصال:</p>
+                  <img src="\${qrUrl}" width="200" height="200">
+                \`;
+              } else {
+                document.getElementById('qrCode').innerHTML = '<p>QR Code غير متاح حالياً</p>';
+              }
             } else {
               document.getElementById('qrCode').innerHTML = '';
             }
@@ -467,7 +469,7 @@ app.use((req, res) => {
     <html>
     <head>
       <title>404 - الصفحة غير موجودة</title>
-      <link href="/css/bootstrap.min.css" rel="stylesheet">
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     </head>
     <body>
       <div class="container text-center mt-5">
@@ -482,6 +484,6 @@ app.use((req, res) => {
 
 // بدء الخادم
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(\`Server running on port \${PORT}\`);
   connectToWhatsApp();
 });
