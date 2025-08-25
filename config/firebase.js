@@ -1,57 +1,60 @@
 // config/firebase.js
 
 import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import admin from 'firebase-admin';
 
+// --- تهيئة المتغيرات ---
+// سنقوم بتعريف المتغيرات هنا لتكون متاحة في نطاق الملف كله
+let db;
+let auth;
+
 /**
- * Initializes the Firebase Admin SDK.
- * It constructs credentials by combining environment variables for project_id and client_email
- * with the private_key supplied securely via Secret Manager.
+ * Initializes the Firebase Admin SDK and exports the necessary services.
  */
 async function initializeFirebase() {
   try {
-    // Exit if the app is already initialized to prevent errors.
     if (admin.apps.length) {
       console.log('Firebase app already initialized.');
+      // إذا كان مهيأ بالفعل، فقط قم بتعيين المتغيرات
+      db = getFirestore();
+      auth = getAuth();
       return;
     }
 
-    // 1. Read credentials from environment variables.
-    // The private_key is securely injected by Google Cloud Run from Secret Manager.
-    const projectId = process.env.FIREBASE_PROJECT_ID;
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-
-    // 2. Validate that all required parts of the credential exist.
-    if (!projectId || !clientEmail || !privateKey) {
-      console.warn('⚠️ Firebase credentials (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, or FIREBASE_PRIVATE_KEY) are missing from the environment. Skipping Firebase initialization.');
-      // In a production environment, if Firebase is critical, you might want to throw an error instead.
-      // For now, we just skip initialization.
-      return;
-    }
-
-    // 3. Construct the full credential object for Firebase.
+    // بناء الاعتمادات من متغيرات البيئة + Secret Manager
     const credentials = {
-      project_id: projectId,
-      client_email: clientEmail,
-      // The private_key from Secret Manager does not need the `\n` replacement.
-      private_key: privateKey,
+      project_id: process.env.FIREBASE_PROJECT_ID,
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      private_key: process.env.FIREBASE_PRIVATE_KEY,
     };
 
-    // 4. Initialize the Firebase app with the constructed credentials.
+    // التحقق من وجود الاعتمادات
+    if (!credentials.project_id || !credentials.client_email || !credentials.private_key) {
+      console.warn('⚠️ Firebase credentials missing. Skipping initialization.');
+      return;
+    }
+
+    // تهيئة التطبيق
     initializeApp({
       credential: cert(credentials)
     });
 
-    console.log('✅ Firebase initialized successfully from environment variables and Secret Manager.');
+    // --- تعيين المتغيرات بعد التهيئة ---
+    db = getFirestore();
+    auth = getAuth();
+
+    console.log('✅ Firebase initialized successfully.');
 
   } catch (error) {
     console.error('❌ Firebase initialization failed:', error);
-    // If Firebase is absolutely essential for the app to run, exit the process in production.
     if (process.env.NODE_ENV === 'production') {
       process.exit(1);
     }
   }
 }
 
-export { initializeFirebase };
+// --- التصدير (Export) ---
+// قم بتصدير المتغيرات مباشرة، بالإضافة إلى دالة التهيئة
+export { initializeFirebase, db, auth };
