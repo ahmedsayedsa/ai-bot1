@@ -94,60 +94,57 @@ class Server {
         });
     }
 
-setupRoutes() {
-    // Health check endpoint
-    this.app.get('/health', (req, res) => {
-        // ... (code)
-    });
-
-    // API routes
-    this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/user', userRoutes);
-    this.app.use('/api/admin', adminRoutes);
-    this.app.use('/api/payments', paymentsRoutes);
-
-    // --- ⬇️ مسارات الصفحات المحددة أولاً ⬇️ ---
-    this.app.get('/admin', cspOverride, (req, res) => {
-        res.sendFile(path.join(__dirname, '../public/admin.html'));
-    });
-
-    this.app.get('/login', (req, res) => {
-        res.sendFile(path.join(__dirname, '../public/login.html'));
-    });
-
-    this.app.get('/register', (req, res) => {
-        res.sendFile(path.join(__dirname, '../public/register.html'));
-    });
-
-    this.app.get('/user', cspOverride, (req, res) => {
-        res.sendFile(path.join(__dirname, '../public/user.html'));
-    });
-
-    this.app.get('/', (req, res) => {
-        res.sendFile(path.join(__dirname, '../public/index.html'));
-    });
-
-    // --- ⬇️ ثم مسار الملفات الثابتة ⬇️ ---
-    this.app.use(express.static(path.join(__dirname, '../public'), {
-        maxAge: env.NODE_ENV === 'production' ? '1d' : '0',
-        etag: true,
-        lastModified: true
-    }));
-
-    // --- ⬇️ وأخيرًا، معالج خطأ 404 ⬇️ ---
-    this.app.use('*', (req, res) => {
-        if (req.path.startsWith('/api/')) {
-            res.status(404).json({
-                success: false,
-                message: 'API endpoint not found'
+    setupRoutes() {
+        // Health check endpoint
+        this.app.get('/health', (req, res) => {
+            res.status(200).json({
+                status: 'healthy',
+                timestamp: new Date().toISOString(),
+                uptime: process.uptime(),
+                environment: env.NODE_ENV,
+                version: process.env.npm_package_version || '1.0.0'
             });
-        } else {
-            // بما أن express.static جاء قبله، إذا وصلنا إلى هنا، فالملف غير موجود
-            res.status(404).sendFile(path.join(__dirname, '../public/404.html'));
-        }
-    });
-}
+        });
 
+        // API routes
+        this.app.use('/api/auth', authRoutes);
+        this.app.use('/api/user', userRoutes);
+        this.app.use('/api/admin', adminRoutes);
+        this.app.use('/api/payments', paymentsRoutes);
+
+        // Serve HTML files with CSP override where needed
+        this.app.get('/admin', cspOverride, (req, res) => {
+            res.sendFile(path.join(__dirname, '../public/admin.html'));
+        });
+
+        this.app.get('/login', (req, res) => {
+            res.sendFile(path.join(__dirname, '../public/login.html'));
+        });
+
+        this.app.get('/register', (req, res) => {
+            res.sendFile(path.join(__dirname, '../public/register.html'));
+        });
+
+        this.app.get('/user', cspOverride, (req, res) => {
+            res.sendFile(path.join(__dirname, '../public/user.html'));
+        });
+
+        this.app.get('/', (req, res) => {
+            res.sendFile(path.join(__dirname, '../public/index.html'));
+        });
+
+        // 404 handler
+        this.app.use('*', (req, res) => {
+            if (req.path.startsWith('/api/')) {
+                res.status(404).json({
+                    success: false,
+                    message: 'API endpoint not found'
+                });
+            } else {
+                res.status(404).sendFile(path.join(__dirname, '../public/404.html'));
+            }
+        });
+    }
 
     setupErrorHandling() {
         // Global error handler
