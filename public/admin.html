@@ -2,77 +2,140 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>لوحة الأدمن</title>
-  <script>
-    let loggedIn = false;
-
-    async function loginAdmin() {
-      const user = document.getElementById("username").value;
-      const pass = document.getElementById("password").value;
-      if (user === "admin" && pass === "1234") {
-        loggedIn = true;
-        document.getElementById("login").style.display = "none";
-        document.getElementById("panel").style.display = "block";
-        loadUsers();
-      } else {
-        alert("خطأ في تسجيل الدخول");
-      }
+  <title>لوحة التحكم - الأدمن</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      direction: rtl;
+      text-align: right;
+      background: #f4f4f9;
+      padding: 20px;
     }
-
-    async function addUser() {
-      const name = document.getElementById("name").value;
-      const phone = document.getElementById("phone").value;
-      const days = document.getElementById("days").value;
-
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + parseInt(days));
-
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name, phone,
-          status: "active",
-          endDate: endDate.toISOString()
-        })
-      });
-      const data = await res.json();
-      alert(data.message);
-      loadUsers();
+    h2 {
+      color: #333;
     }
-
-    async function loadUsers() {
-      const res = await fetch("/api/all-users");
-      const users = await res.json();
-      const list = document.getElementById("users");
-      list.innerHTML = "";
-      for (let [phone, user] of Object.entries(users)) {
-        const li = document.createElement("li");
-        li.textContent = `${user.name} - ${phone} - ${user.subscription?.status}`;
-        list.appendChild(li);
-      }
+    form {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-  </script>
+    input, select, button {
+      margin: 5px 0;
+      padding: 10px;
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .msg {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: #fff;
+    }
+    table th, table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    table th {
+      background: #eee;
+    }
+  </style>
 </head>
 <body>
-  <div id="login">
-    <h2>تسجيل دخول الأدمن</h2>
-    <input id="username" placeholder="اسم المستخدم"><br>
-    <input id="password" type="password" placeholder="كلمة السر"><br>
-    <button onclick="loginAdmin()">دخول</button>
-  </div>
+  <h2>لوحة تحكم الأدمن</h2>
 
-  <div id="panel" style="display:none">
-    <h2>لوحة التحكم</h2>
-    <h3>إضافة مستخدم</h3>
-    <input id="name" placeholder="الاسم"><br>
-    <input id="phone" placeholder="رقم الهاتف"><br>
-    <input id="days" placeholder="مدة الاشتراك (بالأيام)"><br>
-    <button onclick="addUser()">إضافة</button>
+  <form id="userForm">
+    <label>الاسم:</label>
+    <input type="text" id="name" required>
 
-    <h3>قائمة العملاء</h3>
-    <ul id="users"></ul>
-  </div>
+    <label>رقم الهاتف:</label>
+    <input type="text" id="phone" required placeholder="مثال: 01012345678">
+
+    <label>الحالة:</label>
+    <select id="status">
+      <option value="active">فعال</option>
+      <option value="inactive">غير فعال</option>
+    </select>
+
+    <label>تاريخ انتهاء الاشتراك:</label>
+    <input type="date" id="endDate" required>
+
+    <button type="submit">حفظ المستخدم</button>
+    <div class="msg" id="msg"></div>
+  </form>
+
+  <h3>📋 قائمة المستخدمين</h3>
+  <button onclick="loadUsers()">تحديث القائمة</button>
+  <table id="usersTable">
+    <thead>
+      <tr>
+        <th>الاسم</th>
+        <th>الهاتف</th>
+        <th>الحالة</th>
+        <th>تاريخ الانتهاء</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const apiBase = "/api";
+
+    document.getElementById("userForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById("name").value;
+      const phone = document.getElementById("phone").value;
+      const status = document.getElementById("status").value;
+      const endDate = document.getElementById("endDate").value;
+
+      const res = await fetch(`${apiBase}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, status, endDate })
+      });
+
+      const data = await res.json();
+      document.getElementById("msg").textContent = data.message || data.error;
+      if (data.success) loadUsers();
+    });
+
+    async function loadUsers() {
+      const res = await fetch(`${apiBase}/users`);
+      const users = await res.json();
+
+      const tbody = document.querySelector("#usersTable tbody");
+      tbody.innerHTML = "";
+
+      users.forEach(u => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${u.name}</td>
+          <td>${u.phone}</td>
+          <td>${u.subscription?.status || "N/A"}</td>
+          <td>${u.subscription?.endDate ? new Date(u.subscription.endDate._seconds * 1000).toLocaleDateString() : "N/A"}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    loadUsers();
+  </script>
 </body>
 </html>
 
