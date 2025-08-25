@@ -377,7 +377,7 @@ class AdminDashboard {
         } catch (error) {
             console.error('Error approving payment:', error);
         }
-    }
+    },
 
     async rejectPayment(paymentId) {
         try {
@@ -392,7 +392,7 @@ class AdminDashboard {
         } catch (error) {
             console.error('Error rejecting payment:', error);
         }
-    }
+    },
 
     handleLogout() {
         localStorage.removeItem('authToken');
