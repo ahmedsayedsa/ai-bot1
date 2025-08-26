@@ -22,3 +22,4 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+module.exports = limiter; //
