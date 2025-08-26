@@ -1,35 +1,41 @@
 /**
  * Main Server File
  * WhatsApp Subscription Bot - Cloud Run Ready
+ * --- Converted to ES Modules (ESM) ---
  */
 
-const express = require('express');
-const path = require('path');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
+import express from 'express';
+import path from 'path';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import { fileURLToPath } from 'url'; // Helper for __dirname in ESM
 
 // Import configurations and utilities
-const env = require('./config/env');
-const logger = require('./utils/logger');
-const { initializeFirebase } = require('./config/firebase');
+import env from './config/env.js';
+import logger from './utils/logger.js';
+import { initializeFirebase } from './config/firebase.js';
 
-// Import middlewares
-const rateLimitMiddleware = require('./middlewares/rateLimit');
-const errorHandler = require('./middlewares/errorHandler');
-const cspOverride = require('./middlewares/cspOverride');
+// Import middlewares using ESM syntax
+import { apiLimiter, authLimiter } from './middlewares/rateLimit.js'; // Correctly import named exports
+import errorHandler from './middlewares/errorHandler.js';
+import cspOverride from './middlewares/cspOverride.js';
 
-// Import routes
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/user');
-const adminRoutes = require('./routes/admin');
-const paymentsRoutes = require('./routes/payments');
+// Import routes using ESM syntax
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/user.js';
+import adminRoutes from './routes/admin.js';
+import paymentsRoutes from './routes/payments.js';
+
+// Recreate __dirname for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 class Server {
     constructor() {
         this.app = express();
-        this.port = process.env.PORT || env.PORT || 8080; // Cloud Run PORT
-        this.host = '0.0.0.0'; // Important for Cloud Run
+        this.port = process.env.PORT || env.PORT || 8080;
+        this.host = '0.0.0.0';
         this.server = null;
 
         this.setupMiddlewares();
@@ -54,7 +60,7 @@ class Server {
                 },
             },
             crossOriginEmbedderPolicy: false
-        }));
+        } ));
 
         // CORS configuration
         this.app.use(cors({
@@ -64,7 +70,7 @@ class Server {
             credentials: true,
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization']
-        }));
+        } ));
 
         // Compression
         this.app.use(compression());
@@ -73,8 +79,8 @@ class Server {
         this.app.use(express.json({ limit: '10mb' }));
         this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-        // Rate limiting
-        this.app.use(rateLimitMiddleware);
+        // Apply general rate limiting to all API requests
+        this.app.use('/api/', apiLimiter);
 
         // Static files
         this.app.use(express.static(path.join(__dirname, '../public'), {
@@ -106,8 +112,10 @@ class Server {
             });
         });
 
-        // API routes
-        this.app.use('/api/auth', authRoutes);
+        // Apply the more strict authLimiter only to auth routes
+        this.app.use('/api/auth', authLimiter, authRoutes);
+        
+        // Other API routes
         this.app.use('/api/user', userRoutes);
         this.app.use('/api/admin', adminRoutes);
         this.app.use('/api/payments', paymentsRoutes);
@@ -195,7 +203,7 @@ class Server {
                 logger.info(`🚀 Server running on http://${this.host}:${this.port}`, {
                     environment: env.NODE_ENV,
                     port: this.port,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date( ).toISOString()
                 });
             });
 
@@ -207,13 +215,12 @@ class Server {
     }
 }
 
-// Start server if this file is run directly
-if (require.main === module) {
-    const server = new Server();
-    server.start().catch((error) => {
-        logger.error('Server startup failed:', error);
-        process.exit(1);
-    });
-}
+// Start server
+const server = new Server();
+server.start().catch((error) => {
+    logger.error('Server startup failed:', error);
+    process.exit(1);
+});
 
-module.exports = Server;
+// Export the server class for potential testing
+export default Server;
