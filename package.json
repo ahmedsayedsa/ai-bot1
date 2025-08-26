@@ -17,7 +17,7 @@
     "docker:run": "docker run -p 8080:8080 --env-file .env whatsapp-bot",
     "gcp:deploy": "gcloud run deploy wa-sub-bot --source . --platform managed --region me-central1 --allow-unauthenticated",
     "logs": "gcloud logging read 'resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"wa-sub-bot\"' --limit 50 --format=\"table(timestamp,textPayload)\"",
-    "health": "node -e \"require('http' ).get('http://localhost:8080/health', (res ) => { let data = ''; res.on('data', chunk => data += chunk); res.on('end', () => console.log(JSON.parse(data))); }).on('error', console.error)\""
+    "health": "node -e \"require('http'  ).get('http://localhost:8080/health', (res  ) => { let data = ''; res.on('data', chunk => data += chunk); res.on('end', () => console.log(JSON.parse(data))); }).on('error', console.error)\""
   },
   "keywords": [
     "whatsapp",
@@ -32,8 +32,8 @@
   "author": "Ahmed Hell",
   "license": "MIT",
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
   },
   "dependencies": {
     "express": "^4.18.2",
