@@ -1,67 +1,38 @@
+/**
+ * Environment variables configuration.
+ * Loads variables from .env file and exports them.
+ * Converted to ES Modules (ESM).
+ */
+
 import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Load environment variables from .env file
+dotenv.config();
 
-// تحميل ملف .env من جذر المشروع
-dotenv.config({ path: join(__dirname, '../../.env') });
+const env = {
+  // Environment
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  PORT: process.env.PORT || 8080,
 
-export const config = {
-  // إعدادات الخادم
-  port: process.env.PORT || 8080, // Cloud Run يرسل PORT تلقائيًا
-  nodeEnv: process.env.NODE_ENV || 'development',
+  // Frontend URL for CORS
+  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
 
-  // إعدادات Firebase
-  firebase: {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  },
+  // Session and JWT secrets
+  SESSION_SECRET: process.env.SESSION_SECRET,
+  JWT_SECRET: process.env.JWT_SECRET,
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1d',
 
-  // إعدادات JWT
-  jwt: {
-    secret: process.env.JWT_SECRET,
-    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-    refreshSecret: process.env.REFRESH_TOKEN_SECRET,
-  },
+  // Admin credentials
+  ADMIN_USER: process.env.ADMIN_USER,
+  ADMIN_PASS: process.env.ADMIN_PASS,
 
-  // إعدادات الدفع
-  payment: {
-    provider: process.env.PAYMENT_PROVIDER || 'stripe',
-    secret: process.env.PAYMENT_PROVIDER_SECRET,
-    webhookSecret: process.env.PAYMENT_WEBHOOK_SECRET,
-  },
-
-  // إعدادات التطبيق
-  app: {
-    baseUrl: process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 8080}`,
-    name: process.env.APP_NAME || 'نظام إدارة اشتراكات واتساب',
-  },
-
-  // إعدادات معدل الطلبات
-  rateLimit: {
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000,
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS, 10) || 100,
-  },
+  // Firebase Credentials (ensure they are set in the environment )
+  FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
+  FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
+  FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
+  
+  // Add any other environment variables you need
 };
 
-// قائمة المتغيرات المطلوبة لتشغيل التطبيق
-const requiredVars = [
-  'FIREBASE_PROJECT_ID',
-  'FIREBASE_CLIENT_EMAIL',
-  'FIREBASE_PRIVATE_KEY',
-  'JWT_SECRET'
-];
-
-// دالة لفحص المتغيرات بعد بدء السيرفر
-export function checkRequiredEnvVars() {
-  const missing = requiredVars.filter(varName => !process.env[varName]);
-
-  if (missing.length > 0) {
-    console.warn(`⚠️ تحذير: المتغيرات التالية غير موجودة في بيئة التشغيل: ${missing.join(', ')}`);
-  } else {
-    console.log('✅ جميع متغيرات البيئة المطلوبة موجودة.');
-  }
-}
+// Export the configuration object as the default export
+export default env;
